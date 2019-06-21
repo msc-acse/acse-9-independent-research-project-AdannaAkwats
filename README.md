@@ -31,6 +31,9 @@ pip install -r requirements.txt
 
 ## Usage
 
+### Input and output folders
+The `.nc` data files to be analysed should be stored in the folder `data`. The `results` folder will store the analysis, once computed. 
+
 There are two ways to call the program: 
 
 ### Command line interface (CLI)
@@ -102,13 +105,6 @@ other arguments:
                         https://docs.scipy.org/doc/numpy/reference/generated/numpy.histogram_bin_edges.html#numpy.histogram_bin_edges
 ```
 
-[//]: # "
-There are already some ``.nc`` files in `data` folder within time period 1953 - 1955, you can use them as examples:
-```
-python main.py dic_deltap 1953 1955 -v dic_deltap -e 2
-```
-"
-
 ### Using an input file
 
 An input file is set up for the user to fill in the required values in ``input.txt``. 
@@ -116,14 +112,6 @@ After filling the values in the file, to run the program simply call:
 ```
 python main.py
 ```
-
-[//]: # "
-An example input file, with values filled in is also provided, the program can be called 
-with this example with the following command:
-```
-python main.py --example
-```
-"
 
 ## Assumptions
 - Files do not have overlapped data.
@@ -150,7 +138,7 @@ python main.py --example
   - `{NUM}` is the ensemble number
   - `{YEAR 1}` and `{YEAR 2}` are the start and end year of the data in the file.
  
-[//]: # "Some starter files are stored in folder `data`. "
+
 
 ## Tests
 [Pytests](https://docs.pytest.org/en/latest/index.html) were written to test and support the code. These can be run by:
