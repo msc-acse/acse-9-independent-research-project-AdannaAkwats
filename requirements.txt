@@ -2,11 +2,6 @@ matplotlib==3.0.1
 nco==1.0.0
 netCDF4==1.4.2
 numpy==1.16.3
-numpydoc==0.8.0
-pandas==0.23.4
-pep8==1.7.1
 pytest==3.5.1
 python-dateutil==2.7.3
-python-utils==2.3.0
 scipy==1.2.1
-scitools-iris==2.2.0
