@@ -1,0 +1,129 @@
+﻿# User input for Climate Modelling Diagnostics Program
+#
+#
+# FILENAMES OF DATA FORMAT
+# ------------------------------------------------------------------------------
+# The filenames should be in the format:
+#       "{START OF FILENAME}_ens{NUM}_{YEAR}.nc"
+#  where
+#  - {START OF FILENAME} is the prefix of the file, this can be the algae type.
+#  - {NUM} is the ensemble number
+#  - {YEAR} is the year.
+#
+#  OR if you have multiple years stored in one file then:
+#
+#  The filenames should be in the format:
+#        "{START OF FILENAME}_ens{NUM}_{YEAR 1}_{YEAR 2}.nc"
+#  where
+#  - {START OF FILENAME} is the prefix of the file, this can be the algae type.
+#   - {NUM} is the ensemble number
+#  - {YEAR 1} and {YEAR 2} are the start and end year of the data in the file.
+#
+#
+# NOTES
+# ------------------------------------------------------------------------------
+# ASSUMPTIONS
+# ------------
+#    - Files do not have overlapped data.
+#    - Daily increments of data, except if the monthly tag is set in the arguments.
+#    - Grids have constant latitude and longitude.
+# ------------
+#    - Some example files are in the data folder.
+#
+#
+# ----------------- PLEASE FILL IN THE ARGUMENTS LISTED BELOW ------------------
+#
+# REQUIRED ARGUMENTS
+# ------------------------------------------------------------------------------
+Prefix:
+Start date of analysis:
+Variables:
+Number of ensembles: 1
+#
+# ------------------------------------------------------------------------------
+# OPTIONAL ARGUMENTS
+# ------------------------------------------------------------------------------
+End date of analysis:
+Plot: False
+Monthly: False
+Grid:
+Sample:
+Mask file:
+Save Output: False
+Covary: False
+Histogram bin selection: fd
+#
+#
+# ------------------------------------------------------------------------------
+# HELP
+# ------------------------------------------------------------------------------
+# REQUIRED ARGUMENTS
+# ------------------------------------------------------------------------------
+# Prefix : This is the prefix of the file. This can be the type of algae
+# e.g. dic_deltap, fndet_100, jprod_ndi_100.
+# ------
+# Start date of analysis: Can be in the following formats:
+#    YYYY-MM-DD : e.g. 2020-04-12
+#    YYYY-MM    : e.g. 2020-04
+#    YYYY       : e.g. 2020
+#    - If day is not given, the 1st of the given month will be used
+#      i.e. 2020-04 => 2020-04-01
+#    - If day and month is not given, 1st Jan will be used as the start date
+#      i.e. 2020 => 2020-01-01
+# ------
+# Variables: Variables of data to analyse
+# ------
+# Number of ensembles: The number of ensembles of the data.
+#                      If not set, the default value = 1
+# ------------------------------------------------------------------------------
+# OPTIONAL ARGUMENTS
+# ------------------------------------------------------------------------------
+# End date of analysis: Same format as start date of analysis
+#   If end date not given:
+#   - If only start year is given, the end date is automatically set to the
+#     31 Dec of start year
+#   - If start year and month is given, then end date is set to the end of
+#     the start month
+#   If end date given:
+#   - If day is not given, the end of the given month will be used
+#     i.e. 2020-04 => 2020-04-30
+#   - If day and month is not given, 31 Dec will be used as the end date
+#     i.e. 2020 => 2020-12-31
+# ------
+# Plot: True/False : Plot histogram and timeseries graphs
+# ------
+# Monthly: Set to True if data in file is stored in monthly increments,
+#          otherwise daily increments is assumed.
+# ------
+# Grid Point: Latitude, Longitude
+#        Uses grid point that latitude and longitude lies in.
+#        Cannot be used in conjunction with sample point.
+# ------
+# Sample Point: Latitude, Longitude
+#        Uses sample point given by latitude and longitude using interpolation.
+#        Cannot be used in conjunction with grid point.
+# ------
+# Mask file: Uses masking grid given as a file. Contains description of
+#             multiple polygons.
+# ------
+# Save output: True/False: Save data output of histogram and timeseries
+# ------
+# Covary: True/False: Perform covariance analysis on the variables.
+# ------
+# Histogram bin selection: Way of choosing the number of bins using in the
+#    histogram. The default = fd, the Freedman Diaconis Estimator.
+#    List of choices:
+#    ---------------
+#    fd      - Freedman Diaconis Estimator
+#    sturges - R’s default method, only accounts for data size.
+#    auto    - Maximum of the sturges and fd estimators.
+#    doane   - An improved version of Sturges estimator that works better with
+#              non-normal datasets.
+#    scott   - Less robust estimator that that takes into account data variability
+#              and data size.
+#    stone   - Estimator based on leave-one-out cross-validation estimate of the
+#              integrated squared error.
+#    rice    - Estimator does not take variability into account, only data size.
+#    sqrt    - Square root (of data size) estimator
+# For more detailed explanations, go to:
+# https://docs.scipy.org/doc/numpy/reference/generated/numpy.histogram_bin_edges.html#numpy.histogram_bin_edges
