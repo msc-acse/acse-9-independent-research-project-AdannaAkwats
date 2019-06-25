@@ -104,7 +104,10 @@ other arguments:
                          Options for bin size selection. If not set, the default value = fd (Freedman Diaconis Estimator). The list of the potential options are listed in:
                         https://docs.scipy.org/doc/numpy/reference/generated/numpy.histogram_bin_edges.html#numpy.histogram_bin_edges
 ```
-
+#### Example commands
+```
+python main.py sst 1953 1955 -v sst -e 12
+```
 ### Using an input file
 
 An input file is set up for the user to fill in the required values in ``input.txt``. 
@@ -112,6 +115,7 @@ After filling the values in the file, to run the program simply call:
 ```
 python main.py
 ```
+An pre-filled input file is given as an example in `input_example.txt`.
 
 ## Assumptions
 - Files do not have overlapped data.
