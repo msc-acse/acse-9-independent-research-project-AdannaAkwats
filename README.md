@@ -111,6 +111,29 @@ python main.py sst 1953 1955 -v sst -e 12
 ### Using an input file
 
 An input file is set up for the user to fill in the required values in ``input.txt``. 
+The values to fill in are listed below. The pre-filled values are given as the default. 
+```
+# REQUIRED ARGUMENTS
+# ------------------------------------------------------------------------------
+Prefix:
+Start date of analysis:
+Variables:
+Number of ensembles: 1
+#
+# ------------------------------------------------------------------------------
+# OPTIONAL ARGUMENTS
+# ------------------------------------------------------------------------------
+End date of analysis:
+Plot: False
+Monthly: False
+Grid:
+Sample:
+Mask file:
+Save Output: False
+Covary: False
+Histogram bin selection: fd
+#
+```
 After filling the values in the file, to run the program simply call: 
 ```
 python main.py
