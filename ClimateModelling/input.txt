@@ -52,6 +52,7 @@ Mask file:
 Save Output: False
 Covary: False
 Histogram bin selection: fd
+Longitude centre:
 #
 #
 # ------------------------------------------------------------------------------
@@ -127,3 +128,7 @@ Histogram bin selection: fd
 #    sqrt    - Square root (of data size) estimator
 # For more detailed explanations, go to:
 # https://docs.scipy.org/doc/numpy/reference/generated/numpy.histogram_bin_edges.html#numpy.histogram_bin_edges
+# ------
+# Longitude centre: Low, High
+#        Wraps longitude values between low and high.
+#        e.g. -180, 180

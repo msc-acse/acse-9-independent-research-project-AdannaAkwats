@@ -1,11 +1,165 @@
 import sys
-import time
 from scipy import interpolate
 from utils import *
-import matplotlib.pyplot as plt
 from netCDF4 import Dataset
-from nco import Nco
 import directories
+import xarray as xr
+import iris
+import warnings
+import cartopy.crs as ccrs
+
+
+def extract_data2(algae_type, variables, start_date, end_date, num_ens, monthly=False, lat=None, lon=None,
+                 grid=None, mask=None, lon_bounds=None, test=True):
+    """
+    Extracts the data given by the user and stores them
+    :param algae_type: name of prefix of filename to look into
+    :param variables: list of variables to extract from files e.g. ['temp', 'sal']
+    :param start_date: start date given to user
+    :param end_date: end date given to user
+    :param num_ens: number of ensembles, int
+    :param monthly: data is stored in monthly increments (time = 12) else assumed (time = 365)
+    :param lat: latitude, set if grid or sample point, floats
+    :param lon: longitude, set if grid or sample point, floats
+    :param grid: set if grid point is given
+    :param mask: set if mask file is given, file containing the boolean array of mask to go over grid, string
+    :param lon_bounds: longitude center range, tuple
+    :return: dictionary storing arrays or list of arrays:
+            e.g. if only one file inputted and variables = ['temp', 'sal'], then
+                dict = {'temp': [...], 'sal': [...]
+                if multiple files inputted and variables = ['temp', 'sal'], then
+                dict = {'temp': [ [..], [..], ..], 'sal': [ [..], [..], ..]
+            time_name: name of time variable in file
+            ens_files: the data nc files that will be used when writing output in netcdf file
+            abs_files: same as ens_files except files are in absolute path
+    """
+
+    # If mask, then get polygons list
+    polygons = get_polygons(mask)
+
+    # Check if sample point
+    sample = False
+    if lat and lon and not grid:
+        sample = True
+
+    # Get day, month and year
+    day_s, mon_s, yr_s = start_date[0], start_date[1], start_date[2]
+    day_e, mon_e, yr_e = end_date[0], end_date[1], end_date[2]
+
+    # Get path
+    path = directories.CLIMATE_DATA
+
+    # Get files and min and maximum year
+    files, min_yr, max_yr = get_files_time_period(algae_type, yr_s, yr_e)
+
+    # Save list of dictionaries - each dict in the list is an ensemble
+    saved = [{} for _ in range(num_ens)]
+
+    # Get files in absolute path saved in ensemble groups
+    files = [os.path.join(path, file) for file in files]
+    ens_files = [[] for _ in range(num_ens)]
+    abs_files = [[] for _ in range(num_ens)]
+
+    for i in range(len(files)):
+        ens_indx = ens_to_indx(get_ens_num(files[i]))
+        # save in ens_files
+        ens_files[ens_indx].append(files[i])
+        # Get absolute path
+        joined = os.path.abspath(files[i])
+
+        if test:  # make changes specific to my PC
+            joined = joined.replace("Adanna Akwataghibe", "Adanna")
+        # save in ens_files
+        abs_files[ens_indx].append(joined)
+
+    # Get exact indices of start and end date
+    till_start, till_end = get_diff_start_end(start_date, end_date, min_yr=min_yr, monthly=monthly)
+
+    # Save names of latitude, longitude, depth or time
+    time_name, lat_name, lon_name = None, None, None
+    # Set if data is 4D
+    depth_name = None
+
+    # Transform the lon lat point into rotated coordinates
+    target_xy = None
+    if sample or grid:
+        pp_cs = iris.coord_systems.GeogCS(iris.fileformats.pp.EARTH_RADIUS)
+        rot_pole = pp_cs.as_cartopy_crs()
+        target_xy = rot_pole.transform_point(lon, lat, ccrs.Geodetic())
+
+    # Go through variables in each ensemble
+    for i in range(num_ens):
+        datasets = xr.open_mfdataset(ens_files[i])
+        for var in variables:
+            # Check if variable is in the dataset
+            if var not in datasets:  # throw an error and stop
+                print("Error in function extract_file : Variable %s not found in files" % var)
+                sys.exit()
+
+            # Select time period in dataset
+            time_selected = datasets[var][dict(time=slice(till_start, till_end))]
+            # Convert to cube
+            cube = time_selected.to_iris()
+
+            # Get names of longitude and latitude variables
+            # Get list of coordinate names
+            coord_names = [coord.name() for coord in cube.coords()]
+            # Get names of coordinates
+            for dd in list(coord_names):
+                if dd == 't' or dd == 'time':
+                    time_name = dd
+                elif dd[0].lower() == 'y' or 'lat' in dd.lower() or 'latitude' in dd.lower():
+                    lat_name = dd
+                elif dd[0].lower() == 'x' or 'lon' in dd.lower() or 'longitude' in dd.lower():
+                    lon_name = dd
+                # Check if 3D data
+                else:
+                    if not (dd == 'bounds' or dd == 'bnds'):
+                        depth_name = dd
+
+            # Centre to new longitude bounds
+            lons = cube.coord(lon_name).points
+            if lon_bounds:
+                lons = iris.analysis.cartography.wrap_lons(lons, lon_bounds[0], lon_bounds[1] - lon_bounds[0])
+
+            if sample or grid:
+                # Save interpolated values
+                found_grid = None
+
+                # Check lat and lon are in grid
+                lats = cube.coord(lat_name).points
+                if not (min(lons) <= lon <= max(lons)) or not (min(lats) <= lat <= max(lats)):
+                    print("Error: extract_data function: latitude and longitude are outside grid.")
+                    sys.exit()
+
+                # Construct lat and lon to give tp iris cube interpolate function
+                samples = [(lat_name, target_xy[1]), (lon_name, target_xy[0])]
+                if grid:
+                    # Uses nearest neighbour interpolation and takes into account spherical distance
+                    found_grid = cube.interpolate(samples, iris.analysis.Nearest())
+                    # found_grid = res.data
+
+                    # If in NaN grid space, tell user
+                    if np.isnan(found_grid).any():
+                        warnings.warn("NaN values found in interpolated grids.")
+                if sample:
+                    found_grid = cube.interpolate(samples, iris.analysis.Linear())
+
+                # TODO: what if variable = Nan ???
+                saved[i][var] = found_grid
+            else:
+                if lon_bounds:
+                    dim_coord = cube.coord(lon_name)
+                    centred_coord = iris.coords.AuxCoord(lons, standard_name=dim_coord.standard_name,
+                                                             units=dim_coord.units,
+                                                             long_name=dim_coord.long_name, var_name=dim_coord.var_name,
+                                                             attributes=dim_coord.attributes, bounds=dim_coord.bounds)
+                    # Replace coordinate
+                    cube.replace_coord(centred_coord)
+
+                saved[i][var] = cube
+
+    return saved, time_name, ens_files, abs_files
 
 
 def extract_data(algae_type, variables, start_date, end_date, num_ens, monthly=False, lat=None, lon=None,
@@ -161,204 +315,3 @@ def extract_data(algae_type, variables, start_date, end_date, num_ens, monthly=F
     return saved, units, files, nan_values
 
 
-def create_histogram(list_ens, units, start_date, end_date, nan_values, monthly=False, save_out=None,
-                     cov=None, sel=None, plot=False):
-    """
-    Analysis the data given - in this case it computes the histogram (assumes grid/sample point)
-    :param list_ens: the list of ensembles (dicts) containing the data of the climate variables
-    :param units: the units matching to each variable
-    :param start_date: start date given to user
-    :param end_date: end date given to user
-    :param nan_values: the missing values in the variables data array
-    :param monthly: data is stored in monthly increments (time = 12) else assumed (time = 365)
-    :param save_out: if set, then save output of histogram/ rimeseries
-    :param cov: if set, then perform covariance analysis
-    :param sel: selection option for bin siz, default is fd - Freedman Diaconis Estimator
-    :param plot: if plot is true, then shows plot of histogram
-    :return: None
-    """
-
-    if not sel:
-        sel = 'fd'
-    fig, axs = plt.subplots(len(list_ens), len(list_ens[0]), squeeze=False)
-    time_str = "daily"
-    if monthly:
-        time_str = "monthly"
-    fig.suptitle("Variables " + str(list(list_ens[0])) + " measured " + time_str + " between " + str(start_date[0]) +
-                 "-" + str(start_date[1]) + "-" + str(start_date[2]) + " and " + str(end_date[0]) + "-" +
-                 str(end_date[1]) + "-" + str(end_date[2]) + " using the E2S2M climate model")
-    a, e = 0, 0
-    for dict_ in list_ens:
-        axs[e, a].set_title("Ensemble " + str(e))
-        for d in dict_:
-            ens = dict_[d].flatten()
-            indices = np.argwhere(np.isclose(ens, nan_values[d]))
-            ens = np.delete(ens, indices)
-            hist, bin_edges = np.histogram(ens, bins=sel)
-            print(ens)
-            if plot and not cov:
-                axs[e, a].hist(ens, bins=sel)
-                axs[e, a].set_ylabel("Frequency")
-                axs[e, a].set_xlabel(d + ' (' + units[d] + ')')
-                # a += 1
-
-            if plot and cov:  # If covariance between 2 variables, plot a 2d histogram
-                axs[a].hist2d(ens, bins=sel)
-        e += 1
-
-    plt.show()
-
-    return None
-
-
-def create_timeseries(list_ens, units, start_date, end_date, monthly=False, save_out=None, cov=None):
-    """
-    Analysis the data given - in this case it computes the timeseries (assumes grid/sample point)
-    :param list_ens: the list of ensembles (dicts) containing the data of the climate variables
-    :param units: the units matching to each variable
-    :param start_date and end_date: extract data within this time frame
-    :param monthly: data is stored in monthly increments (time = 12) else assumed (time = 365)
-    :param save_out: if set, then save output of histogram/ rimeseries
-    :param cov: if set, then perform covariance analysis
-    :return: None
-    """
-    return None
-
-
-def compute_average(list_ens, nan_values):
-    """
-    Analysis the data given - in this case it computes the mean
-    :param list_ens: the list of ensembles (dicts) containing the data of the climate variables
-    :param nan_values: missing values in data set
-    :return:
-        ens_means: list of averages of the different ensembles
-    """
-
-    # Holds the means for each ensemble
-    ens_means = []
-    for dict_ in list_ens:
-        # Save the mean of each variable in a dict of list
-        means = {}
-        # Calculate the mean of each variable in the dictionary given
-        for d in dict_:
-            # Select the parts of the data within timeframe
-            mean = np.mean(dict_[d], axis=0)
-            # Replace values close to nan values to actual nan values
-            if mean.shape:
-                mean[np.isclose(mean, nan_values[d], rtol=1)] = nan_values[d]
-            # Save mean for variable
-            means[d] = mean
-        ens_means.append(means)
-
-    return ens_means
-
-
-def write_means_to_netcdf_file(files, ens_means, variables, start_date, end_date, argv, test=False):
-    """
-    Write means computed in netcdf files
-    :param files: initial files
-    :param ens_means: ensemble means calculated calling function compute_average
-    :param variables: list of variables
-    :param start_date: start date list in [day, month, year] format
-    :param end_date: end date list in [day, month, year] format
-    :param argv: string containing command line arguments used
-    :param test: if test is true, make some changes specific to files on my pc
-    :return: None, files created in folder analysis/ensemble_means
-    """
-
-    # Initialise Nco
-    nco = Nco()
-
-    # Start and end date string
-    start_end_str = str(start_date[0]) + "-" + str(start_date[1]) + "-" + str(start_date[2]) + " and " + \
-                    str(end_date[0]) + "-" +str(end_date[1]) + "-" + str(end_date[2])
-
-    # Get path
-    path = directories.CLIMATE_DATA
-
-    # Get normal and files in absolute path saved in ensemble groups
-    ens_files = [[] for _ in range(len(ens_means))]
-    abs_files = [[] for _ in range(len(ens_means))]
-
-    # Get absolute path of each file
-    for i in range(len(files)):
-        # Get file ensemble number index
-        ens_indx = ens_to_indx(get_ens_num(files[i]))
-        # save in ens_files
-        ens_files[ens_indx].append(files[i])
-        # Get absolute path
-        joined = os.path.abspath(os.path.join(path, files[i]))
-
-        if test:
-            joined = joined.replace("Adanna Akwataghibe", "Adanna")
-        # save in ens_files
-        abs_files[ens_indx].append(joined)
-
-    # Get folder to store ensemble means
-    results = directories.ANALYSIS
-    mean_folder = os.path.abspath(os.path.join(results, directories.MEANS))
-    if test:
-        mean_folder = mean_folder.replace("Adanna Akwataghibe", "Adanna")
-
-    # Go through ensembles, merge files to get output and write to output
-    for i in range(len(ens_means)):
-        # Get first file name in specific ensemble and add last year to name - use as output file name
-        output_file = ""
-        if ens_files[i][0].endswith(".nc"):
-            output_file = ens_files[i][0][:-3] + '_' + str(end_date[2]) + '.nc'
-
-        output_file = os.path.join(mean_folder, output_file)
-
-        # Merge files in ensemble in output_file
-        nco.ncecat(input=abs_files[i], output=output_file)
-
-        # Write means to file
-        with Dataset(abs_files[i][0], 'r') as src, Dataset(output_file, 'a') as dest:
-            for var in variables:
-                # create dataset identical to original variable in file
-                mean_var_name = var + '_mean'
-                datatype = src.variables[var].datatype
-                # Get dimensions without time
-                dims = src.variables[var].dimensions[1:]
-                mean_var = dest.createVariable(mean_var_name, datatype, dims)
-                # save means in variable
-                mean_var[:] = ens_means[i][var][:]
-                mean_var.setncatts(src[var].__dict__)
-                mean_var.long_name = mean_var.long_name + ' averaged between ' + start_end_str
-
-            # Write to description and history of file
-            desc_str = "Added averages of variables " + ', '.join(variables) + " within time period " + \
-                                       start_end_str
-
-            if 'description' in dest.ncattrs():
-                dest.description = desc_str + ' \n' + dest.description
-            else:
-                dest.description = desc_str
-            dest.history = time.ctime(time.time()) + ': Commands used to produce file: ' + argv + ' \n' + \
-                               time.ctime(time.time()) + ': Functions used:  extract_data, compute_average,' \
-                                                         ' write_means_to_netcdf_file' + ' \n' + dest.history
-
-    print("Mean ensemble files created in " + os.path.join(directories.ANALYSIS, directories.MEANS) + "folder.")
-
-
-def plot_graph(file):
-    """
-    Plot the data given in file
-    :param file: file from analysis
-    :return: graph plot in output + saves as png file
-    """
-
-    # Open file
-    dataset = Dataset(file, 'r')
-
-    d = np.array(dataset.variables['mean_air_temperature'])
-
-    fig, ax = plt.subplots()
-    ax.imshow(d)
-
-    png_file = file.rstrip('nc') + 'png'
-    fig.savefig(png_file)
-
-    print("Image is saved in the " + directories.ANALYSIS + " folder as a png file.")
-
-    return None

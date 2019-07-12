@@ -4,6 +4,8 @@ from Months import Month
 from calendar import monthrange
 from datetime import datetime, date
 from extract import *
+from analysis import *
+from write_output import *
 import directories
 
 
@@ -98,18 +100,21 @@ def file_entry(example=False):
             sys.exit()
 
     # Check if any optional arguments are not filled in
-    for i in range(4, 12):
-        if args[i].lower() == 'false' or args[i].lower() == 'f':
+    for i in range(4, 14):
+        if len(args[i]) == 0:
+            args[i] = False
+        elif args[i].lower() == 'false' or args[i].lower() == 'f':
             args[i] = False
         elif args[i].lower() == 'true' or args[i].lower() == 't':
             args[i] = True
 
     # histogram option
-    if len(args[12]) == 0:
+    if len(args[12]) == 0 or not args[12]:
         hist = 'fd'
 
     algae_type, start, ens, end = args[0], args[1], int(args[3]), args[4]
     plot, monthly, grid, sample, mask, output, covary, hist = args[5], args[6], args[7], args[8], args[9], args[10], args[11], args[12]
+    lb = args[13]
 
     # Check for grid and sample
     if args[7]:
@@ -121,12 +126,18 @@ def file_entry(example=False):
         sample[0] = float(sample[0].strip())
         sample[1] = float(sample[1].strip())
 
+    # Check for longitude centre
+    if args[13]:
+        lb = args[13].split(',')
+        lb[0] = float(lb[0].strip())
+        lb[1] = float(lb[1].strip())
+
     # Get variables and put in list
     varbs = args[2].split(',')
     for i in range(len(varbs)):
         varbs[i] = varbs[i].strip()
 
-    return algae_type, start, varbs, ens, end, plot, monthly, grid, sample, mask, output, covary, hist
+    return algae_type, start, varbs, ens, end, plot, monthly, grid, sample, mask, output, covary, hist, lb
 
 
 def user_entry():
@@ -189,6 +200,9 @@ def user_entry():
     group.add_argument('-s', '--sample', nargs=2, type=float, metavar=("lat", "lon"), help="Uses sample point given by"
                                                                                            " latitude and longitude "
                                                                                            "using interpolation.")
+    group.add_argument('-lb', '--lon_bounds', nargs=2, type=float, metavar=("low", "high"), help="Range of longitude "
+                                                                                                "values to centre around"
+                                                                                                "e.g -180, 180")
     parser.add_argument('-mk', '--mask', nargs=1, metavar="filename", help="Uses masking grid given as a file "
                                                                            "(contains boolean array to be imposed on "
                                                                            "the global grid).")
@@ -209,9 +223,9 @@ def user_entry():
 
     # If no arguments are given, use input file
     if len(sys.argv) == 1:
-        algae_type, start, varbs, ens, end, plot, monthly, grid, sample, mask, output, covary, hist = file_entry()
+        algae_type, start, varbs, ens, end, plot, monthly, grid, sample, mask, output, covary, hist, lon_bounds = file_entry()
     elif len(sys.argv) == 2 and (sys.argv[1] == '-ex' or sys.argv[1] == '--example'):
-        algae_type, start, varbs, ens, end, plot, monthly, grid, sample, mask, output, covary, hist = file_entry(example=True)
+        algae_type, start, varbs, ens, end, plot, monthly, grid, sample, mask, output, covary, hist, lon_bounds = file_entry(example=True)
     else:
         # Arguments
         args = parser.parse_args()
@@ -228,6 +242,7 @@ def user_entry():
         output = args.output
         covary = args.covary
         hist = args.hist
+        lon_bounds = args.lon_bounds
 
     # Get command line arguments
     argv = 'python main.py ' + algae_type + ' ' + str(start)
@@ -297,19 +312,29 @@ def user_entry():
 
     print("Histogram bin selection option:", hist)
 
+    if lon_bounds:
+        print("Longitude centering option selected.")
+        argv = argv + ' -lb ' + str(lon_bounds[0]) + ' ' + str(lon_bounds[1])
+
     # Call functions to perform analysis
     start = [day_s, mon_s, yr_s]
     end = [day_e, mon_e, yr_e]
 
-    # Extract data from files
-    saved, units, files, nan_values = extract_data(algae_type, varbs, start, end, ens,
-                                                       monthly=monthly, lat=lat, lon=lon, grid=grid,
-                                                       mask=mask)
+    saved, time_name, ens_files, abs_files = extract_data2(algae_type, varbs, start, end, ens,
+                                            monthly=monthly, lat=lat, lon=lon, grid=grid, mask=mask, lon_bounds=lon_bounds)
 
-    # Compute averages
-    ens_means = compute_average(saved, nan_values)
+    # print(ens_means)
+    # # Extract data from files
+    # saved, units, files, nan_values = extract_data(algae_type, varbs, start, end, ens,
+    #                                                    monthly=monthly, lat=lat, lon=lon, grid=grid,
+    #                                                    mask=mask)
 
-    # Write to netcdf file, pass in means and variable names
-    write_means_to_netcdf_file(files, ens_means, varbs, start, end, argv, test=True)
+    ens_means = compute_stats_analysis(saved, time_name, analysis='mean')
+    #
+    # # Compute averages
+    # ens_means = compute_average(saved, nan_values)
+    #
+    # # Write to netcdf file, pass in means and variable names
+    write_means_to_netcdf_file(ens_files, abs_files, ens_means, varbs, start, end, argv, test=True)
 
     # create_histogram(saved, units, start, end, nan_values, sel=hist, plot=plot)

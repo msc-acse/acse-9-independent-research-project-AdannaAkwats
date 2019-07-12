@@ -167,3 +167,15 @@ def get_files_time_period(prefix, yr_s, yr_e):
                         max_yr = snd_yr
 
     return files, min_yr, max_yr
+
+
+def get_polygons(mask_file):
+    """
+    Load mask file which contains masks - the polygons indices (longitude, latitude) to separate the grids into regions
+    :param mask_file: mask file name, string
+    :return: nested list of  polygons indices, each list represents each mask
+    """
+
+    if not mask_file:
+        return None
+    return None
