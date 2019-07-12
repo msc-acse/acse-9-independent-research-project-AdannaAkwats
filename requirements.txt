@@ -1,5 +1,4 @@
 matplotlib==3.0.1
-Cartopy==0.17.0
 nco==1.0.0
 netCDF4==1.4.2
 numpy==1.16.3
