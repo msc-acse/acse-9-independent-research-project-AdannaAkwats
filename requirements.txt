@@ -6,5 +6,5 @@ pytest==3.5.1
 python-dateutil==2.7.3
 scipy==1.2.1
 xarray==0.12.3
-iris==1.0.4
+iris==2.2.0
 cartopy==0.17.0
