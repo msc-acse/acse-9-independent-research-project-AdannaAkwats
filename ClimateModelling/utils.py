@@ -1,11 +1,12 @@
 import re
 import os
-from datetime import date
+from datetime import date, datetime
 from dateutil import rrule
 from Months import Month
 import numpy as np
 import directories
-
+import ast
+import sys
 
 """
 Script that contains useful functions
@@ -113,16 +114,21 @@ def find_nearest(array, value):
     return idx
 
 
-def generate_example_mask(lat_size, lon_size):
-    """
-    Generates random mask and saves to a mask_example.txt
-    :param lat_size: latitude
-    :param lon_size: longitude
-    :return: random boolean 2d array, saves output to file
-    """
-    mask_rand = np.random.randint(2, size=(lat_size, lon_size))
-    save_path = directories.ANALYSIS + '/'
-    np.savetxt(os.path.join(save_path, 'mask_example.out'), mask_rand)
+# def generate_example_mask(lat_size, lon_size):
+#     """
+#     Generates random mask and saves to a mask_example.txt
+#     :param lat_size: latitude
+#     :param lon_size: longitude
+#     :return: random boolean 2d array, saves output to file
+#     """
+#     mask_1 = [(0, 0), (100.5, 0), (0, 100.8), (50, 120.7)]
+#     mask_2 = [(0, 100.8), (50, 120.7), (0, lat_size), (100, lat_size)]
+#     mask_3 = [(100, 0), (lon_size, 0), (50, 120.7), (lon_size, 100)]
+#     mask_4 = [(50, 120.7), (lon_size, 100), (100, lat_size), (lon_size, lat_size)]
+#     mask_rand = [mask_1, mask_2, mask_3, mask_4]
+#     # mask_rand = np.random.randint(2, size=(lat_size, lon_size))
+#     save_path = directories.ANALYSIS + '/'
+#     np.savetxt(os.path.join(save_path, 'mask_example.out'), mask_rand, mask_rand.reshape((3, -1)))
 
 
 def get_files_time_period(prefix, yr_s, yr_e):
@@ -176,6 +182,85 @@ def get_polygons(mask_file):
     :return: nested list of  polygons indices, each list represents each mask
     """
 
-    if not mask_file:
-        return None
+    # Mask file expected to have only one list of polygons
+    # Comments in file can have '#' at the start of the line
+
+    # open a file using with statement
+    with open(mask_file, 'r') as fh:
+        for curline in fh:
+            # check if the current line
+            # starts with "#"
+            if "#" not in curline:
+                # convert string to nested list of tuples
+                try:
+                    converted = ast.literal_eval(curline)
+                except Exception:
+                    print("Error in function get_polygons : List not constructed properly in mask file.")
+                    print("Please see mask_example.out for an example of what kind of string is expected to contruct "
+                          "polygons.")
+                    sys.exit()
+                return converted
     return None
+
+
+def make_into_file_name(str):
+    """
+    Remove spaces in string and replace with underscore
+    :param str: string
+    :return: string
+    """
+
+    # Replace all runs of whitespace with a single dash
+    str = re.sub(r"\s+", '_', str)
+
+    return str
+
+
+def check_list_date(date_list):
+    """
+    Check that date is a list with 3 ints (day, month, yr)
+    :param date: list of length of 3
+    :return: boolean
+    """
+
+    return len(date_list) == 3 and all(isinstance(item, int) for item in date_list)
+
+
+def get_date_from_cftime(full_date_str):
+    """
+    Get date without time
+    :param full_date_str: string
+    :return: string
+    """
+
+    match = re.search(r'(\d+-\d+-\d+)', full_date_str)
+    if match:
+        return str(match.group(1))
+
+
+def convert_cftime_datetime(cftime_date):
+    """
+    Convert cftime.Datetime to datetime
+    :param cftime_date: cftime.Datetime object
+    :return: python datetime object
+    """
+
+    # Convert cftime date to string
+    cftime_date_str = cftime_date.strftime()
+
+    # Get only base date (with no time)
+    date_str = get_date_from_cftime(cftime_date_str)
+
+    # Convert date to datetime
+    dt = datetime.strptime(date_str, "%Y-%m-%d")
+
+    return dt
+
+
+def is_nested_list(l):
+    """
+    Check if list is nested
+    :param l: list
+    :return: boolean
+    """
+    return any(isinstance(i, list) for i in l)

@@ -43,16 +43,17 @@ Number of ensembles: 2
 # ------------------------------------------------------------------------------
 # OPTIONAL ARGUMENTS
 # ------------------------------------------------------------------------------
-End date of analysis: 1955
-Plot: False
+End date of analysis: 1954
+Plot: 1, 1953-02-04
 Monthly: False
 Grid:
 Sample: 14.5, -27.5
 Mask file:
-Save Output: False
+Save Output: True
 Covary: False
 Histogram bin selection: fd
-Longitude centre: -180, 180
+Longitude centre:
+Save extract data: True
 #
 #
 # ------------------------------------------------------------------------------
@@ -91,7 +92,12 @@ Longitude centre: -180, 180
 #   - If day and month is not given, 31 Dec will be used as the end date
 #     i.e. 2020 => 2020-12-31
 # ------
-# Plot: True/False : Plot histogram and timeseries graphs
+# Plot: Ensemble number, Date : Plot map, histogram and timeseries graphs
+#    E.g. --plot 1 2005-03-25
+#    Format of date : YYYY-MM-DD
+#    - map : needs ensemble number and date to plot
+#    - histogram : needs ensemble number to plot
+#    - timeseries : needs ensemble number to plot
 # ------
 # Monthly: Set to True if data in file is stored in monthly increments,
 #          otherwise daily increments is assumed.
@@ -132,3 +138,6 @@ Longitude centre: -180, 180
 # Longitude centre: Low, High
 #        Wraps longitude values between low and high.
 #        e.g. -180, 180
+# ------
+# Save extract data: True/False: Save iris cubes from ensembles into a pickle file.
+#

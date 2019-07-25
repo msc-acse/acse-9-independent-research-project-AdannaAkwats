@@ -1,62 +1,63 @@
 import iris
-from utils import *
+from cdo import Cdo
 
 
-def compute_stats_analysis(list_ens, time_name, analysis='mean'):
+def compute_stats_analysis(list_ens, analysis='mean'):
     """
        Analysis the data given - in this case it computes the mean, std, median and rms
        :param list_ens: the list of ensembles (dicts) containing the data of the climate variables
-       :param time_name: name of time variable in original file
        :param analysis: type of computation
        :return:
            ens_means: list of averages of the different ensembles
+           string : type of analysis computed
        """
+    # Assertions
+    assert list_ens is not None
+    assert analysis.lower() in ['mean', 'rms', 'std', 'median', 'all']
+
+    time_name = 'time'
     # Holds the means for each ensemble
     ens_calcs = []
     for dict_ in list_ens:
         # Save the mean of each variable in a dict of list
         calcs = {}
+        # Used only if we analyse all at the same time
+        mean_calcs, std_calcs, median_calcs, rms_calcs = {}, {}, {}, {}
         # Calculate the mean of each variable in the dictionary given
         for d in dict_:
-            calc = None
-            if analysis == 'mean':
+            calc, mean_calc, std_calc, median_calc, rms_calc = None, None, None, None, None
+            if analysis == 'all':  # Calculate all stats
+                mean_calc = dict_[d].collapsed(time_name, iris.analysis.MEAN).data
+                std_calc = dict_[d].collapsed(time_name, iris.analysis.STD_DEV).data
+                median_calc = dict_[d].collapsed(time_name, iris.analysis.MEDIAN).data
+                rms_calc = dict_[d].collapsed(time_name, iris.analysis.RMS).data
+            elif analysis.lower() == 'mean':
                 calc = dict_[d].collapsed(time_name, iris.analysis.MEAN).data
-            elif analysis == 'std':
+            elif analysis.lower() == 'std':
                 calc = dict_[d].collapsed(time_name, iris.analysis.STD_DEV).data
-            elif analysis == 'median':
+            elif analysis.lower() == 'median':
                 calc = dict_[d].collapsed(time_name, iris.analysis.MEDIAN).data
             elif analysis.lower() == 'rms':
                 calc = dict_[d].collapsed(time_name, iris.analysis.RMS).data
-            calcs[d] = calc
-        ens_calcs.append(calcs)
+            # Save values to dicts
+            if analysis.lower() == 'all':
+                mean_calcs[d] = mean_calc
+                std_calcs[d] = std_calc
+                median_calcs[d] = median_calc
+                rms_calcs[d] = rms_calc
+            else:
+                calcs[d] = calc
+        if analysis.lower() == 'all':
+            ens_calcs.append([mean_calcs, std_calcs, median_calcs, rms_calcs])
+        else:
+            ens_calcs.append(calcs)
+    print("function compute_stats_analysis: Averages of data successfully computed.")
 
-    return ens_calcs
+    return ens_calcs, analysis.lower()
 
 
-def compute_average(list_ens, nan_values):
-    """
-    Analysis the data given - in this case it computes the mean
-    :param list_ens: the list of ensembles (dicts) containing the data of the climate variables
-    :param nan_values: missing values in data set
-    :return:
-        ens_means: list of averages of the different ensembles
-    """
+def compute_enso_indices():
+    cdo = Cdo()
+    print(cdo.operators)
 
-    # Holds the means for each ensemble
-    ens_means = []
-    for dict_ in list_ens:
-        # Save the mean of each variable in a dict of list
-        means = {}
-        # Calculate the mean of each variable in the dictionary given
-        for d in dict_:
-            # Select the parts of the data within timeframe
-            mean = np.mean(dict_[d], axis=0)
-            # Replace values close to nan values to actual nan values
-            if mean.shape:
-                mean[np.isclose(mean, nan_values[d], rtol=1)] = nan_values[d]
-            # Save mean for variable
-            means[d] = mean
-        ens_means.append(means)
-
-    return ens_means
 
