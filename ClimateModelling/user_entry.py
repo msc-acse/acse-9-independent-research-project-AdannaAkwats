@@ -6,6 +6,7 @@ from datetime import datetime, date
 from extract import *
 from analysis import *
 from write_output import *
+from plots import *
 import directories
 
 
@@ -34,7 +35,7 @@ def check_valid_order(start_date, end_date):
 
 def get_date(date_entry, start=True):
     """
-    Separate date into day, month and year
+    Separate date  d-m-y into day, month and year
     :param date_entry: string containing date e.g. 2020-04
     :param start: if set, then it is the start date of the analysis, else it is the end date
     :return: day, month, year (all integers)
@@ -100,7 +101,7 @@ def file_entry(example=False):
             sys.exit()
 
     # Check if any optional arguments are not filled in
-    for i in range(4, 14):
+    for i in range(4, 15):
         if len(args[i]) == 0:
             args[i] = False
         elif args[i].lower() == 'false' or args[i].lower() == 'f':
@@ -115,7 +116,13 @@ def file_entry(example=False):
     algae_type, start, ens, end = args[0], args[1], int(args[3]), args[4]
     plot, monthly, grid, sample, mask, output, covary, hist = args[5], args[6], args[7], args[8], args[9], args[10], args[11], args[12]
     lb = args[13]
+    save_ext = args[14]
 
+    # Check for plot
+    if plot:
+        plot = plot.split(',')
+        plot[0] = int(plot[0].strip())
+        plot[1] = plot[1].strip()
     # Check for grid and sample
     if args[7]:
         grid = args[7].split(',')
@@ -137,7 +144,7 @@ def file_entry(example=False):
     for i in range(len(varbs)):
         varbs[i] = varbs[i].strip()
 
-    return algae_type, start, varbs, ens, end, plot, monthly, grid, sample, mask, output, covary, hist, lb
+    return algae_type, start, varbs, ens, end, plot, monthly, grid, sample, mask, output, covary, hist, lb, save_ext
 
 
 def user_entry():
@@ -190,8 +197,12 @@ def user_entry():
     - If day and month is not given, 31 Dec will be used as the end date i.e 2020 => 2020-12-31""")
     parser.add_argument('-v', '--vars', nargs='+', metavar="variables", help="<Required> Variables of data to analyse",
                         required=True)
-    parser.add_argument('-p', '--plot', action="store_true", help="Save plots of analysis in " + directories.ANALYSIS +
-                                                                  " as a .png file.")
+    parser.add_argument('-p', '--plot', nargs=2, metavar=("ensemble_number", "date"), help="""Plot map, histogram and timeseries graphs
+    E.g. --plot 1 2005-03-25
+    Format of date : YYYY-MM-DD
+    - map : needs ensemble number and date to plot
+    - histogram : needs ensemble number to plot
+    - timeseries : needs ensemble number to plot""")
     parser.add_argument('-m', '--monthly', action="store_true", help="Data in file is stored in monthly increments.")
     group = parser.add_mutually_exclusive_group()
     group.add_argument('-g', '--grid', nargs=2, type=float, metavar=("lat", "lon"), help="Uses grid point that "
@@ -206,7 +217,7 @@ def user_entry():
     parser.add_argument('-mk', '--mask', nargs=1, metavar="filename", help="Uses masking grid given as a file "
                                                                            "(contains boolean array to be imposed on "
                                                                            "the global grid).")
-    parser.add_argument('-o', '--output', action="store_true", help="Save data output of histogram and timeseries "
+    parser.add_argument('-o', '--output', action="store_true", help="If plot option selected, save data output of histogram and timeseries "
                                                                     "analysis in "
                                                                     + directories.ANALYSIS + " as a .dat file.")
     parser.add_argument('-cv', '--covary', action="store_true", help="Analysis on how the variables given in -v "
@@ -220,15 +231,35 @@ def user_entry():
                                                                     "Diaconis Estimator). The list of the potential "
     "options are listed in: \n"
     "https://docs.scipy.org/doc/numpy/reference/generated/numpy.histogram_bin_edges.html#numpy.histogram_bin_edges")
+    parser.add_argument('-se', '--save_extract', action="store_true", help="Save extracted (iris.cube) data in pkl file.")
+
+    # Initialise the variables
+    algae_type, varbs, start, end, ens, monthly, lat, lon, grid, sample, mask, output, covary, hist, plot, \
+        lon_bounds, save_ext = None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None
+    argv = None
+    loaded_data = None
+    saved, ens_files, abs_files, full_saved = None, None, None, None
+    args_dict = {}
 
     # If no arguments are given, use input file
     if len(sys.argv) == 1:
-        algae_type, start, varbs, ens, end, plot, monthly, grid, sample, mask, output, covary, hist, lon_bounds = file_entry()
+        algae_type, start, varbs, ens, end, plot, monthly, grid, sample, mask, output, covary, hist, lon_bounds, save_ext = file_entry()
     elif len(sys.argv) == 2 and (sys.argv[1] == '-ex' or sys.argv[1] == '--example'):
-        algae_type, start, varbs, ens, end, plot, monthly, grid, sample, mask, output, covary, hist, lon_bounds = file_entry(example=True)
+        algae_type, start, varbs, ens, end, plot, monthly, grid, sample, mask, output, covary, hist, lon_bounds, save_ext = file_entry(example=True)
+    elif len(sys.argv) == 2 and sys.argv[1][-3:] == 'pkl':  # Get pickle file to open
+        loaded_data = sys.argv[1]
+        # Check that it is a pickle file
+        if loaded_data is None or loaded_data[-3:] != 'pkl':
+            print("Error in function user_entry : Pickle file must be used.")
+            sys.exit()
     else:
         # Arguments
         args = parser.parse_args()
+
+        # Make sure that if save output of graphs is selected, we have also selected plotting
+        if args.output and (args.plot is None):
+            parser.error("--output requires --plot.")
+
         algae_type = args.prefix
         start = args.start_date
         varbs = args.vars
@@ -243,98 +274,142 @@ def user_entry():
         covary = args.covary
         hist = args.hist
         lon_bounds = args.lon_bounds
+        save_ext = args.save_extract
 
-    # Get command line arguments
-    argv = 'python main.py ' + algae_type + ' ' + str(start)
-    if end:
-        argv = argv + ' ' + end
-    av = ' '.join(varbs)
-    argv = argv + ' -v ' + av + ' -e ' + str(ens)
+    # If not loading data from pickle file, then get from command line
+    if loaded_data is None:
+        # Get command line arguments
+        argv = 'python main.py ' + algae_type + ' ' + str(start)
+        if end:
+            argv = argv + ' ' + end
+        av = ' '.join(varbs)
+        argv = argv + ' -v ' + av + ' -e ' + str(ens)
 
-    # Get split start date
-    day_s, mon_s, yr_s = get_date(start)
-    if not end:  # If end date not given, use the end of start year
-        if StartBools.just_start_year:
-            end = str(yr_s)
-        elif StartBools.just_start_year_month:
-            end = str(yr_s) + "-" + str(mon_s)
+        # Get split start date
+        day_s, mon_s, yr_s = get_date(start)
+        if not end:  # If end date not given, use the end of start year
+            if StartBools.just_start_year:
+                end = str(yr_s)
+            elif StartBools.just_start_year_month:
+                end = str(yr_s) + "-" + str(mon_s)
 
-    # Get split end date
-    day_e, mon_e, yr_e = get_date(end, start=False)
+        # Get split end date
+        day_e, mon_e, yr_e = get_date(end, start=False)
 
-    # Print user input
-    print("Arguments:")
-    print("- algae type: ", algae_type)
-    print("- variables: ", varbs)
-    print("- start date: " + str(yr_s) + "-" + str(mon_s) + "-" + str(day_s))
-    print("- end date: " + str(yr_e) + "-" + str(mon_e) + "-" + str(day_e))
+        # Print user input
+        print("Arguments:")
+        print("- algae type: ", algae_type)
+        print("- variables: ", varbs)
+        print("- start date: " + str(yr_s) + "-" + str(mon_s) + "-" + str(day_s))
+        print("- end date: " + str(yr_e) + "-" + str(mon_e) + "-" + str(day_e))
 
-    # Check that dates are in valid order
-    is_valid = check_valid_order([day_s, mon_s, yr_s], [day_e, mon_e, yr_e])
-    if not is_valid:
-        print("Error: Invalid start and end date")
-        print("  - The end date is earlier than the start date")
-        sys.exit()
-    print("Number of ensembles:", ens)
+        # Check that dates are in valid order
+        is_valid = check_valid_order([day_s, mon_s, yr_s], [day_e, mon_e, yr_e])
+        if not is_valid:
+            print("Error: Invalid start and end date")
+            print("  - The end date is earlier than the start date")
+            sys.exit()
+        print("Number of ensembles:", ens)
+        if plot:
+            print("Plotting option selected.")
+            argv = argv + ' -p' + str(plot[0]) + ' ' + str(plot[1])
+        if monthly:
+            print("Monthly date expected.")
+            argv = argv + ' -m'
+
+        if grid:
+            lat, lon = grid[0], grid[1]
+            print("Grid point option selected.")
+            argv = argv + ' -g ' + str(grid[0]) + ' ' + str(grid[1])
+        if sample:
+            lat, lon = sample[0], sample[1]
+            print("Sample point option selected.")
+            argv = argv + ' -s ' + str(sample[0]) + ' ' + str(sample[1])
+
+        if mask:
+            if isinstance(mask, list):
+                mask = mask[0]
+            print("Masking grid option selected.")
+            argv = argv + ' -mk ' + mask
+        if output:
+            print("Save analysis data output selected.")
+            argv = argv + ' -o'
+        if covary:
+            print("Co-varying option selected.")
+            argv = argv + ' -cv'
+
+        if not hist:
+            hist = 'fd'
+        elif hist:
+            argv = argv + ' -h ' + hist
+
+        print("Histogram bin selection option:", hist)
+
+        if lon_bounds:
+            print("Longitude centering option selected.")
+            argv = argv + ' -lb ' + str(lon_bounds[0]) + ' ' + str(lon_bounds[1])
+
+        # Call functions to perform analysis
+        start = [day_s, mon_s, yr_s]
+        end = [day_e, mon_e, yr_e]
+
+        # Extract data from files
+        saved, ens_files, abs_files, full_saved = extract_data(algae_type, varbs, start, end, ens,
+                                                monthly=monthly, lat=lat, lon=lon, grid=grid, lon_bounds=lon_bounds)
+
+        # Put all values in dictionary
+        args_dict['algae_type'] = algae_type
+        args_dict['varbs'] = varbs
+        args_dict['start'] = start
+        args_dict['end'] = end
+        args_dict['ens'] = ens
+        args_dict['monthly'] = monthly
+        args_dict['lat'] = lat
+        args_dict['lon'] = lon
+        args_dict['grid'] = grid
+        args_dict['lon_bounds'] = lon_bounds
+        args_dict['save_out'] = output
+        args_dict['hist'] = hist
+        args_dict['plot'] = plot
+        args_dict['argv'] = argv
+        args_dict['mask'] = mask
+
+        # Save data to pickle file
+        if save_ext:
+            # Add to arguments
+            argv = argv + ' -se'
+            args_dict['argv'] = argv
+            # Save data to file
+            save_extract_data_to_file(saved, full_saved, ens_files, abs_files, args_dict)
+
+    else:
+        saved, ens_files, abs_files, args_dict, full_saved = load_extract_data_from_file(loaded_data)
+
+    # COMPUTE ANALYSIS
+    ens_stats, analysis_str = compute_stats_analysis(saved, analysis='all')
+
+    # GET MASK
+    full_mask = None
+    if lat is None:
+        full_mask = xs, ys = get_mask(saved, args_dict['mask'])
+    else:
+        full_mask = xs, ys = get_mask(full_saved, args_dict['mask'])
+
+    # PLOTTING
+    plot = args_dict['plot']
     if plot:
-        print("Plotting option selected.")
-        argv = argv + ' -p'
-    if monthly:
-        print("Monthly date expected.")
-        argv = argv + ' -m'
+        plot_ens_num = int(plot[0])
+        plot_date = plot[1]
+        dt = datetime.strptime(plot_date, "%Y-%m-%d")
+        if args_dict['lat']is None:
+            plot_graph(saved, [dt.day, dt.month, dt.year], args_dict['varbs'], mask=full_mask, save_out=args_dict['save_out'], ens_num=plot_ens_num)
+        else:
+            plot_graph(full_saved, [dt.day, dt.month, dt.year], args_dict['varbs'], mask=full_mask, save_out=args_dict['save_out'], ens_num=plot_ens_num, lat=args_dict['lat'], lon=args_dict['lon'])
+        create_histogram(saved, args_dict['start'], args_dict['end'], args_dict['varbs'], sel=args_dict['hist'], save_out=args_dict['save_out'], ens_num=plot_ens_num)
+        create_timeseries(saved, args_dict['start'], args_dict['end'], args_dict['varbs'], save_out=args_dict['save_out'], ens_num=plot_ens_num)
 
-    lat, lon = None, None
-    if grid:
-        lat, lon = grid[0], grid[1]
-        print("Grid point option selected.")
-        argv = argv + ' -g ' + str(grid[0]) + ' ' + str(grid[1])
-    if sample:
-        lat, lon = sample[0], sample[1]
-        print("Sample point option selected.")
-        argv = argv + ' -s ' + str(sample[0]) + ' ' + str(sample[1])
+    # WRITE ANALYSIS TO NETCDF FILE
+    write_means_to_netcdf_file(ens_files, abs_files, ens_stats, analysis_str, args_dict['varbs'], args_dict['start'], args_dict['end'], args_dict['argv'], test=True)
 
-    if mask:
-        if isinstance(mask, list):
-            mask = mask[0]
-        print("Masking grid option selected.")
-        argv = argv + ' -mk ' + mask
-    if output:
-        print("Save analysis data output selected.")
-        argv = argv + ' -o'
-    if covary:
-        print("Co-varying option selected.")
-        argv = argv + ' -cv'
-
-    if not hist:
-        hist = 'fd'
-    elif hist:
-        argv = argv + ' -h ' + hist
-
-    print("Histogram bin selection option:", hist)
-
-    if lon_bounds:
-        print("Longitude centering option selected.")
-        argv = argv + ' -lb ' + str(lon_bounds[0]) + ' ' + str(lon_bounds[1])
-
-    # Call functions to perform analysis
-    start = [day_s, mon_s, yr_s]
-    end = [day_e, mon_e, yr_e]
-
-    saved, time_name, ens_files, abs_files = extract_data2(algae_type, varbs, start, end, ens,
-                                            monthly=monthly, lat=lat, lon=lon, grid=grid, mask=mask, lon_bounds=lon_bounds)
-
-    # print(ens_means)
-    # # Extract data from files
-    # saved, units, files, nan_values = extract_data(algae_type, varbs, start, end, ens,
-    #                                                    monthly=monthly, lat=lat, lon=lon, grid=grid,
-    #                                                    mask=mask)
-
-    ens_means = compute_stats_analysis(saved, time_name, analysis='mean')
-    #
-    # # Compute averages
-    # ens_means = compute_average(saved, nan_values)
-    #
-    # # Write to netcdf file, pass in means and variable names
-    write_means_to_netcdf_file(ens_files, abs_files, ens_means, varbs, start, end, argv, test=True)
-
-    # create_histogram(saved, units, start, end, nan_values, sel=hist, plot=plot)
+    # Show graphs
+    plt.show()

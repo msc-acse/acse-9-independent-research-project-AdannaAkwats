@@ -1,4 +1,3 @@
-import sys
 from scipy import interpolate
 from utils import *
 from netCDF4 import Dataset
@@ -7,10 +6,14 @@ import xarray as xr
 import iris
 import warnings
 import cartopy.crs as ccrs
+from PIL import Image, ImageDraw
+from functools import reduce
+import operator
+import math
 
 
-def extract_data2(algae_type, variables, start_date, end_date, num_ens, monthly=False, lat=None, lon=None,
-                 grid=None, mask=None, lon_bounds=None, test=True):
+def extract_data(algae_type, variables, start_date, end_date, num_ens, monthly=False, lat=None, lon=None,
+                 grid=None, lon_bounds=None, test=True):
     """
     Extracts the data given by the user and stores them
     :param algae_type: name of prefix of filename to look into
@@ -22,7 +25,6 @@ def extract_data2(algae_type, variables, start_date, end_date, num_ens, monthly=
     :param lat: latitude, set if grid or sample point, floats
     :param lon: longitude, set if grid or sample point, floats
     :param grid: set if grid point is given
-    :param mask: set if mask file is given, file containing the boolean array of mask to go over grid, string
     :param lon_bounds: longitude center range, tuple
     :return: dictionary storing arrays or list of arrays:
             e.g. if only one file inputted and variables = ['temp', 'sal'], then
@@ -32,10 +34,11 @@ def extract_data2(algae_type, variables, start_date, end_date, num_ens, monthly=
             time_name: name of time variable in file
             ens_files: the data nc files that will be used when writing output in netcdf file
             abs_files: same as ens_files except files are in absolute path
+            orig_saved: dict above with full map - this is filled if lat/lon are not None
     """
-
-    # If mask, then get polygons list
-    polygons = get_polygons(mask)
+    # Assertions
+    assert variables is not None
+    assert check_list_date(start_date) and check_list_date(end_date)
 
     # Check if sample point
     sample = False
@@ -54,6 +57,10 @@ def extract_data2(algae_type, variables, start_date, end_date, num_ens, monthly=
 
     # Save list of dictionaries - each dict in the list is an ensemble
     saved = [{} for _ in range(num_ens)]
+    # Save original (without sample or grid point)
+    orig_saved = None
+    if sample or grid:
+        orig_saved = [{} for _ in range(num_ens)]
 
     # Get files in absolute path saved in ensemble groups
     files = [os.path.join(path, file) for file in files]
@@ -117,11 +124,22 @@ def extract_data2(algae_type, variables, start_date, end_date, num_ens, monthly=
                     if not (dd == 'bounds' or dd == 'bnds'):
                         depth_name = dd
 
+            # Change name of latitude and longitude to regular names
+            const_lon_name, const_lat_name, const_time_name = "longitude", "latitude", "time"
+            coord = cube.coord(lon_name)
+            coord.rename(const_lon_name)
+            coord = cube.coord(lat_name)
+            coord.rename(const_lat_name)
+            coord = cube.coord(time_name)
+            coord.rename(const_time_name)
+
+            # Update lon and lat name
+            lon_name, lat_name = const_lon_name, const_lat_name
+
             # Centre to new longitude bounds
             lons = cube.coord(lon_name).points
             if lon_bounds:
                 lons = iris.analysis.cartography.wrap_lons(lons, lon_bounds[0], lon_bounds[1] - lon_bounds[0])
-
             if sample or grid:
                 # Save interpolated values
                 found_grid = None
@@ -140,14 +158,28 @@ def extract_data2(algae_type, variables, start_date, end_date, num_ens, monthly=
                     # found_grid = res.data
 
                     # If in NaN grid space, tell user
-                    if np.isnan(found_grid).any():
+                    if np.isnan(found_grid.data).any():
                         warnings.warn("NaN values found in interpolated grids.")
                 if sample:
                     found_grid = cube.interpolate(samples, iris.analysis.Linear())
 
                 # TODO: what if variable = Nan ???
                 saved[i][var] = found_grid
+
+                # If longitude centre given, then change current coord data to centred data
+                if lon_bounds:
+                    dim_coord = cube.coord(lon_name)
+                    centred_coord = iris.coords.AuxCoord(lons, standard_name=dim_coord.standard_name,
+                                                         units=dim_coord.units,
+                                                         long_name=dim_coord.long_name, var_name=dim_coord.var_name,
+                                                         attributes=dim_coord.attributes, bounds=dim_coord.bounds)
+                    # Replace coordinate
+                    cube.replace_coord(centred_coord)
+                # Save original cube
+                orig_saved[i][var] = cube
+
             else:
+                # If longitude centre given, then change current coord data to centred data
                 if lon_bounds:
                     dim_coord = cube.coord(lon_name)
                     centred_coord = iris.coords.AuxCoord(lons, standard_name=dim_coord.standard_name,
@@ -159,10 +191,120 @@ def extract_data2(algae_type, variables, start_date, end_date, num_ens, monthly=
 
                 saved[i][var] = cube
 
-    return saved, time_name, ens_files, abs_files
+    print("function extract_data: Data successfully extracted from files.")
+
+    return saved, ens_files, abs_files, orig_saved
 
 
-def extract_data(algae_type, variables, start_date, end_date, num_ens, monthly=False, lat=None, lon=None,
+def get_mask(list_ens, maskfile):
+    """
+    Apply mask on arrays of ensemble data
+    :param list_ens: the list of ensembles (dicts) containing the data of the climate variables
+    :param maskfile: file containing the polygons array of mask to go over grid, string
+    :param plot: shows example plot of the mask over a the first variable and a random time period
+    :return: 2D mask array
+    """
+    # Assertions
+    assert list_ens is not None
+
+    if maskfile is None or not maskfile:
+        return None, None
+
+    # Get polygons from mask file
+    polygons = get_polygons(maskfile)
+    points_x, points_y = [], []
+
+    # if only one polygon
+    if not is_nested_list(polygons):
+        # Cast nested list as nested list of tuples
+        polygons = [tuple(l) for l in polygons]
+        # Change to 3D polygon
+        polygons = [polygons]
+
+    # if multiple polygons
+    # Go through each polygon in the list
+    for i in range(len(polygons)):
+        # Sort coordinates of polygons to be in clockwise direction
+        center = tuple(map(operator.truediv, reduce(lambda x, y: map(operator.add, x, y), polygons[i]),
+                           [len(polygons[i])] * 2))
+        sorted_poly = sorted(polygons[i], key=lambda coord: (-135 - math.degrees(
+            math.atan2(*tuple(map(operator.sub, coord, center))[::-1]))) % 360)
+        polygons[i] = sorted_poly
+
+        xs, ys = [], []
+        for j in range(len(sorted_poly)):
+            xs.append(sorted_poly[j][0])
+            ys.append(sorted_poly[j][1])
+
+        points_x.append(xs)
+        points_y.append(ys)
+
+    print("function get_mask: Mask successfully constructed from mask file.")
+
+    return points_x, points_y
+
+
+def get_mask2(list_ens, maskfile):
+    """
+    Apply mask on arrays of ensemble data
+    :param list_ens: the list of ensembles (dicts) containing the data of the climate variables
+    :param maskfile: file containing the polygons array of mask to go over grid, string
+    :param plot: shows example plot of the mask over a the first variable and a random time period
+    :return: 2D mask array
+    """
+    # Assertions
+    assert list_ens is not None
+
+    if maskfile is None or not maskfile:
+        return None
+
+    # Get latitude and longitude - use ad height and width
+    first_key = list(list_ens[0])[0]
+    dims = list_ens[0][first_key].data[0].shape
+    width, height = dims[1], dims[0]
+    # Get polygons from mask file
+    polygons = get_polygons(maskfile)
+    shape = np.asarray(polygons).shape
+    # Cast nested list as nested list of tuples
+    polygons = [tuple(l) for l in polygons]
+
+    # if only one polygon
+    if len(shape) == 2:
+        # Change to 3D polygon
+        polygons = [polygons]
+        # Update shape accordingly
+        shape = np.asarray(polygons).shape
+
+    # if multiple polygons
+    if len(shape) == 3:
+        # Create new image with latitude and longitude as height and width respectively
+        img = Image.new('L', (width, height), 0)
+        # Go through each polygon in the list
+        for i in range(len(polygons)):
+            # Sort coordinates of polygons to be in clockwise direction
+            center = tuple(map(operator.truediv, reduce(lambda x, y: map(operator.add, x, y), polygons[i]),
+                               [len(polygons[i])] * 2))
+            sorted_poly = sorted(polygons[i], key=lambda coord: (-135 - math.degrees(
+                math.atan2(*tuple(map(operator.sub, coord, center))[::-1]))) % 360)
+            polygons[i] = sorted_poly
+            # Draw polygon on image
+            ImageDraw.Draw(img).polygon(polygons[i], fill=i+1)
+        # Get mask from image
+        mask = np.array(img)
+
+        import matplotlib.pyplot as plt
+        plt.imshow(mask)
+
+        print("function get_mask: Mask successfully constructed from mask file.")
+
+        return mask
+
+    else:
+        print("Error in function apply_mask : Arrays is not 2D or 3D.")
+        sys.exit()
+
+
+def extract_data2(algae_type, variables, start_date, end_date, num_ens, monthly=False, lat=None, lon=None,
                  grid=False, mask=None):
     """
     Extracts the data given by the user and stores them
@@ -184,6 +326,9 @@ def extract_data(algae_type, variables, start_date, end_date, num_ens, monthly=F
             units: units of variables
             files: the data nc files that will be used if function write write_averages_to_netcdf_file
     """
+    # Make sure data structures are not empty
+    assert algae_type is not None
+    assert variables is not None
 
     # Check if sample point
     sample = False
