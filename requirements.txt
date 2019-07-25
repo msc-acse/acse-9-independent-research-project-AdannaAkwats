@@ -5,3 +5,10 @@ numpy==1.16.3
 pytest==3.5.1
 python-dateutil==2.7.3
 scipy==1.2.1
+xarray==0.12.3
+Shapely==1.6.4.post2
+Cython==0.28.2
+six==1.11.0
+pyproj==1.9.6
+scitools-iris==2.2.0
+cartopy==0.17.0
