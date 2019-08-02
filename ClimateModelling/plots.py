@@ -3,14 +3,14 @@ from utils import *
 import iris
 import iris.plot as iplt
 import iris.quickplot as qplt
-from iris.time import PartialDateTime
 import pandas as pd
 import seaborn as sns
 from iris.pandas import as_data_frame, as_series
 from pandas.plotting import register_matplotlib_converters
+import sys
 
 
-def create_histogram(list_ens, start_date, end_date, variables, monthly=False, save_out=True, sel='fd', plot=True, ens_num=1):
+def create_histogram(list_ens, start_date, end_date, variables, monthly=False, save_out=True, sel='fd', ens_num=1):
     """
     Plot or save histogram data of cube
     :param list_ens: list of ensemble data
@@ -20,7 +20,6 @@ def create_histogram(list_ens, start_date, end_date, variables, monthly=False, s
     :param monthly: used for title for plot and file name
     :param save_out: if set, then save histogram frequency and values in text file
     :param sel: type of bin selection for 1D histogram
-    :param plot: if set, then plots the histogram in a new window
     :param ens_num: selection of ensemble to use
     """
 
@@ -65,21 +64,20 @@ def create_histogram(list_ens, start_date, end_date, variables, monthly=False, s
         title_name = cubes[0].name() + " and " + cubes[1].name() + part_title
 
     # Plot histogram
-    if plot:
-        sns.set()
-        fig, ax = plt.subplots()
-        if not cov:
-            ax.set_title(title_name)
-            ax.hist(full_datum[0], bins=sel, color="skyblue")
-            ax.set_ylabel("Frequency")
-            ax.set_xlabel(cubes[0].name() + ' (' + str(cubes[0].units) + ')')
+    sns.set()
+    fig, ax = plt.subplots()
+    if not cov:
+        ax.set_title(title_name)
+        ax.hist(full_datum[0], bins=sel, color="skyblue")
+        ax.set_ylabel("Frequency")
+        ax.set_xlabel(cubes[0].name() + ' (' + str(cubes[0].units) + ')')
 
-        else:  # Plot 2D histogram
-            plt.title(title_name)
-            plt.hist2d(full_datum[0], full_datum[1])
-            plt.xlabel(cubes[0].name() + ' (' + str(cubes[0].units) + ')')
-            plt.ylabel(cubes[1].name() + ' (' + str(cubes[1].units) + ')')
-            plt.colorbar(label='Frequency')
+    else:  # Plot 2D histogram
+        plt.title(title_name)
+        plt.hist2d(full_datum[0], full_datum[1])
+        plt.xlabel(cubes[0].name() + ' (' + str(cubes[0].units) + ')')
+        plt.ylabel(cubes[1].name() + ' (' + str(cubes[1].units) + ')')
+        plt.colorbar(label='Frequency')
 
     if save_out:
         # Construct file name
@@ -116,17 +114,18 @@ def create_histogram(list_ens, start_date, end_date, variables, monthly=False, s
         print("Histogram data is saved in the " + directories.ANALYSIS + " folder as a txt file.")
 
 
-def create_timeseries(list_ens, start_date, end_date, variables,  monthly=False, save_out=True, plot=False, ens_num=1):
+def create_timeseries(list_ens, start_date, end_date, variables,  monthly=False, save_out=True, ens_num=1,
+                      func_name=None):
     """
     Analysis the data given - in this case it computes the timeseries (assumes grid/sample point)
     :param list_ens: the list of ensembles (dicts) containing the data of the climate variables
-    :param units: the units matching to each variable
-    :param start_date and end_date: extract data within this time frame
+    :param start_date extract from end date from data, list [d, m, y]
+    :param end_date: extract till end date from data, list [d, m, y]
     :param variables: If one variable - then have 1D histogram. If list of 2 variables, then 2D histogram
     :param monthly: data is stored in monthly increments (time = 12) else assumed (time = 365)
     :param save_out: if set, then save output of histogram/ rimeseries
-    :param cov: if set, then perform covariance analysis
-    :return: None
+    :param ens_num: selection of ensemble to use
+    :param func_name: if user function analysis used, this is the function name
     """
 
     # Make sure data structures are not empty
@@ -136,9 +135,6 @@ def create_timeseries(list_ens, start_date, end_date, variables,  monthly=False,
     # If variables is just one object, cast to list
     if not isinstance(variables, list):
         variables = [variables]
-
-    # Get list of years to use for plots
-    years = list(range(start_date[-1], end_date[-1]+1))
 
     # Daily or monthly
     time_str = "daily"
@@ -153,20 +149,25 @@ def create_timeseries(list_ens, start_date, end_date, variables,  monthly=False,
     for variable in variables:
         # Get cube from dictionary
         cube = list_ens[ens_num][variable]
-
+        # Construct title name
         title_name = cube.name() + " measured " + time_str + " between " + str(start_date[2]) + "-" + str(start_date[1]) + "-" + \
                      str(start_date[0]) + " and " + str(end_date[2]) + "-" + str(end_date[1]) + "-" + str(end_date[0]) \
                      + " using the E2S2M climate model"
-
+        if func_name is not None:
+            title_name = func_name + " of " + title_name
         # Convert cube to pandas series dataframe
         pd_data = None
         try:
             pd_data = as_series(cube)
         except Exception:
             print("Error: function create_timeseries: cannot construct timeseries with more than 1-dimension cube.")
+            return None
 
         # Get x values in series
         indices = pd_data.index
+        if len(indices) == 1:
+            print("Warning in function create_timeseries: cannot construct timeseries of one value.")
+            return None
         # Save dates that are in datetime format
         new_indices = []
         selected_indices = []
@@ -212,7 +213,7 @@ def create_timeseries(list_ens, start_date, end_date, variables,  monthly=False,
         # Boxplot - Yearly seasonality
         df['Month'] = df.index.month
         sns.boxplot(ax=axs[1], data=df, x='Month', y=variable)
-        axs[1].set_title("Yearly seasonality of " + cube.name())
+        axs[1].set_title("Yearly seasonality of " +cube.name())
         axs[1].set_xlabel("Months")
         axs[1].set_ylabel(cube.name())
 
@@ -224,11 +225,10 @@ def create_timeseries(list_ens, start_date, end_date, variables,  monthly=False,
         # axs[2].set_ylabel(cube.name())
 
 
-def plot_graph(list_ens, current_date, variables, mask=None, ens_num=1, save_out=False, lat=None, lon=None):
+def plot_map(list_ens, variables, analysis_str=None, mask=None, ens_num=1, save_out=False, lat=None, lon=None, func_name=None):
     """
-    Plot (and save) graphs given date and variable in cube
+    Plot (and save) maps given date and variable in cube
     :param list_ens: the list of ensembles (dicts) containing the data of the climate variables
-    :param current_date: list of [day, month, year]
     :param variables: variables to select in cube
     :param mask: if given, plot with mask applied
     :param ens_num: gives which ensemble to plot, default = 1
@@ -239,61 +239,76 @@ def plot_graph(list_ens, current_date, variables, mask=None, ens_num=1, save_out
     # Make sure data structures are not empty
     assert list_ens is not None
     assert variables is not None
+    assert analysis_str is not None or func_name is not None
 
     # If variables is just one object, cast to list
     if not isinstance(variables, list):
         variables = [variables]
 
-    # Unpack current date
-    cur_day, cur_month, cur_yr = current_date[0], current_date[1], current_date[2]
-    # Construct date
-    pdt = PartialDateTime(year=cur_yr, month=cur_month, day=cur_day)
-    date_range = iris.Constraint(time=pdt)
-
     for variable in variables:
-        # Extract time in cube
-        cube = list_ens[ens_num][variable].extract(date_range)
+        if analysis_str == 'all':
+            analysis_str = ['mean', 'std', 'median', 'rms']
+        elif analysis_str is not None:
+            analysis_str = [analysis_str]
+        elif func_name is not None:
+            analysis_str = [func_name]
+        for a in range(len(analysis_str)):
+            # Extract time in cube
+            cube = None
+            if len(analysis_str) > 1:
+                cube = list_ens[ens_num][a][variable]
+            else:
+                cube = list_ens[ens_num][variable]
 
-        # Plot title name
-        title_name = cube.name() + " at " + str(cur_yr) + "-" + str(cur_month) + "-" + str(
-            cur_day) + " with variable " + str(variable)
+            # Plot title name
+            title_name = analysis_str[a] + " of " + cube.name() + " of ensemble " + str(ens_num) + " with variable " + str(variable)
 
-        sns.set()
-        # Plot the graph
-        fig, ax = plt.subplots()
-        # Get the Purples "Brewer" palette for plot
-        brewer_cmap = plt.get_cmap('brewer_Purples_09')
+            sns.set()
+            # Plot the graph
+            fig, ax = plt.subplots()
+            # Get the Purples "Brewer" palette for plot
+            brewer_cmap = plt.get_cmap('brewer_Purples_09')
 
-        # Draw the contours, with n-levels set for the map colours
-        lats = cube.coord('latitude')
-        lons = cube.coord('longitude')
-        qplt.contourf(cube, cmap=brewer_cmap)
-        # cube.intersection(longitude=(-45, 45))  # get specific range
-        plt.xlabel("Longitude (" + str(lons.units) + ")")
-        plt.ylabel("Latitude (" + str(lats.units) + ")")
+            # Draw the contours, with n-levels set for the map colours
+            lats = cube.coord('latitude')
+            lons = cube.coord('longitude')
+            try:
+                qplt.contourf(cube, cmap=brewer_cmap)
+            except Exception:
+                print("Error in function plot_map: cube is not 2D.")
+                return None
+            # cube.intersection(longitude=(-45, 45))  # get specific range
+            plt.xlabel("Longitude (" + str(lons.units) + ")")
+            plt.ylabel("Latitude (" + str(lats.units) + ")")
 
-        # x and y axis
-        x_btm, x_top = plt.xlim()
-        y_btm, y_top = plt.ylim()
+            # x and y axis
+            x_btm, x_top = plt.xlim()
+            y_btm, y_top = plt.ylim()
 
-        plt.xticks(np.arange(x_btm,  x_top, step=20))
-        plt.yticks(np.arange(y_btm,  y_top, step=30))
+            plt.xticks(np.arange(x_btm,  x_top, step=20))
+            plt.yticks(np.arange(y_btm,  y_top, step=30))
 
-        # Add a citation to the plot.
-        iplt.citation(iris.plot.BREWER_CITE)
+            # Add a citation to the plot.
+            iplt.citation(iris.plot.BREWER_CITE)
 
-        plt.scatter(lon, lat, s=100, c='black', marker='x', label="Point (" + str(lon) + ", " + str(lat) + ")")
+            # Plot X on map if point is given
+            if lon is not None:
+                plt.scatter(lon, lat, s=100, c='black', marker='x', label="Point (" + str(lon) + ", " + str(lat) + ")")
 
-        # Overlay mask
-        xs, ys = mask
-        if xs is not None:
-            for i in range(len(xs)):
-                plt.fill(xs[i], ys[i], alpha=0.7, label='Mask')
-            title_name = "Applied masks to " + cube.name() + " with variable " + str(variable)
-        plt.legend(frameon=True)
-        plt.title(title_name)
+            # Overlay mask
+            xs, ys = mask
+            if xs is not None:
+                for i in range(len(xs)):
+                    plt.fill(xs[i], ys[i], alpha=0.7, label='Mask')
+                title_name = "Applied masks to " + cube.name() + " with variable " + str(variable)
 
-        if save_out:
-            title_name = make_into_file_name(title_name)
-            plt.savefig(os.path.join(directories.ANALYSIS, title_name))
-            print("Map is saved in the " + directories.ANALYSIS + " folder as a png file.")
+            plt.title(title_name)
+
+            # Have legend if mask or point
+            if lon is not None or xs is not None:
+                plt.legend(frameon=True)
+
+            if save_out:
+                title_name = make_into_file_name(title_name)
+                plt.savefig(os.path.join(directories.ANALYSIS, title_name))
+                print("Map is saved in the " + directories.ANALYSIS + " folder as a png file.")
