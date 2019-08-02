@@ -44,16 +44,17 @@ Number of ensembles: 2
 # OPTIONAL ARGUMENTS
 # ------------------------------------------------------------------------------
 End date of analysis: 1954
-Plot: 1, 1953-02-04
+Plot: 1
 Monthly: False
-Grid:
-Sample: 14.5, -27.5
+Grid: 14.5, -27.5
+Sample:
 Mask file:
 Save Output: True
 Covary: False
 Histogram bin selection: fd
 Longitude centre:
 Save extract data: True
+User function:
 #
 #
 # ------------------------------------------------------------------------------
@@ -92,12 +93,10 @@ Save extract data: True
 #   - If day and month is not given, 31 Dec will be used as the end date
 #     i.e. 2020 => 2020-12-31
 # ------
-# Plot: Ensemble number, Date : Plot map, histogram and timeseries graphs
-#    E.g. --plot 1 2005-03-25
-#    Format of date : YYYY-MM-DD
-#    - map : needs ensemble number and date to plot
-#    - histogram : needs ensemble number to plot
-#    - timeseries : needs ensemble number to plot
+# Plot: Ensemble number : Plot map, histogram and timeseries graphs given
+#    specific ensemble to plot
+#    E.g. --plot 1
+#    The ensemble number must be > 0.
 # ------
 # Monthly: Set to True if data in file is stored in monthly increments,
 #          otherwise daily increments is assumed.
@@ -140,4 +139,11 @@ Save extract data: True
 #        e.g. -180, 180
 # ------
 # Save extract data: True/False: Save iris cubes from ensembles into a pickle file.
-#
+# ------
+# User function: File name, Function name
+#       Use function written by the user and stored in user_function folder for analysis.
+#              file_name : name of file that contains function in user_function folder
+#              function_name : name of function to call
+#       Note: user functions are expected to only take in a cube as an argument. An example of a function
+#             can be found in user_function/example_function.py
+

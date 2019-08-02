@@ -114,23 +114,6 @@ def find_nearest(array, value):
     return idx
 
 
-# def generate_example_mask(lat_size, lon_size):
-#     """
-#     Generates random mask and saves to a mask_example.txt
-#     :param lat_size: latitude
-#     :param lon_size: longitude
-#     :return: random boolean 2d array, saves output to file
-#     """
-#     mask_1 = [(0, 0), (100.5, 0), (0, 100.8), (50, 120.7)]
-#     mask_2 = [(0, 100.8), (50, 120.7), (0, lat_size), (100, lat_size)]
-#     mask_3 = [(100, 0), (lon_size, 0), (50, 120.7), (lon_size, 100)]
-#     mask_4 = [(50, 120.7), (lon_size, 100), (100, lat_size), (lon_size, lat_size)]
-#     mask_rand = [mask_1, mask_2, mask_3, mask_4]
-#     # mask_rand = np.random.randint(2, size=(lat_size, lon_size))
-#     save_path = directories.ANALYSIS + '/'
-#     np.savetxt(os.path.join(save_path, 'mask_example.out'), mask_rand, mask_rand.reshape((3, -1)))
-
-
 def get_files_time_period(prefix, yr_s, yr_e):
     """
     Get nc files within the time period, with the prefix
@@ -172,6 +155,11 @@ def get_files_time_period(prefix, yr_s, yr_e):
                     if snd_yr > max_yr:
                         max_yr = snd_yr
 
+    # Check if files are empty
+    if len(files) == 0:
+        print("Error in function get_files_time_period: No NetCDF data files given within selected time period.")
+        sys.exit()
+
     return files, min_yr, max_yr
 
 
@@ -190,7 +178,7 @@ def get_polygons(mask_file):
         for curline in fh:
             # check if the current line
             # starts with "#"
-            if "#" not in curline:
+            if "#" not in curline and len(curline) > 1:
                 # convert string to nested list of tuples
                 try:
                     converted = ast.literal_eval(curline)

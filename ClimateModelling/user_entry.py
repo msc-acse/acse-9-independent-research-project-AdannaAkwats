@@ -1,8 +1,5 @@
-import sys
 import argparse
-from Months import Month
 from calendar import monthrange
-from datetime import datetime, date
 from extract import *
 from analysis import *
 from write_output import *
@@ -90,7 +87,7 @@ def file_entry(example=False):
         for curline in fh:
             # check if the current line
             # starts with "#"
-            if "#" not in curline:
+            if "#" not in curline and len(curline) > 1:
                 arg = curline.split(':')[1].strip()
                 args.append(arg)
 
@@ -101,7 +98,7 @@ def file_entry(example=False):
             sys.exit()
 
     # Check if any optional arguments are not filled in
-    for i in range(4, 15):
+    for i in range(4, 16):
         if len(args[i]) == 0:
             args[i] = False
         elif args[i].lower() == 'false' or args[i].lower() == 'f':
@@ -117,34 +114,55 @@ def file_entry(example=False):
     plot, monthly, grid, sample, mask, output, covary, hist = args[5], args[6], args[7], args[8], args[9], args[10], args[11], args[12]
     lb = args[13]
     save_ext = args[14]
+    func = args[15]
 
     # Check for plot
     if plot:
-        plot = plot.split(',')
-        plot[0] = int(plot[0].strip())
-        plot[1] = plot[1].strip()
+        plot = [int(plot.strip())]
     # Check for grid and sample
     if args[7]:
         grid = args[7].split(',')
-        grid[0] = float(grid[0].strip())
-        grid[1] = float(grid[1].strip())
+        try:
+            grid[0] = float(grid[0].strip())
+            grid[1] = float(grid[1].strip())
+        except Exception:
+            print("Error in function file_entry: Argument may be missing a comma.")
+            sys.exit()
     elif args[8]:
         sample = args[8].split(',')
-        sample[0] = float(sample[0].strip())
-        sample[1] = float(sample[1].strip())
+        try:
+            sample[0] = float(sample[0].strip())
+            sample[1] = float(sample[1].strip())
+        except Exception:
+            print("Error in function file_entry: Argument may be missing a comma.")
+            sys.exit()
 
     # Check for longitude centre
     if args[13]:
         lb = args[13].split(',')
-        lb[0] = float(lb[0].strip())
-        lb[1] = float(lb[1].strip())
+        try:
+            lb[0] = float(lb[0].strip())
+            lb[1] = float(lb[1].strip())
+        except Exception:
+            print("Error in function file_entry: Argument may be missing a comma.")
+            sys.exit()
 
     # Get variables and put in list
     varbs = args[2].split(',')
     for i in range(len(varbs)):
         varbs[i] = varbs[i].strip()
 
-    return algae_type, start, varbs, ens, end, plot, monthly, grid, sample, mask, output, covary, hist, lb, save_ext
+    # Check for user function
+    if func:
+        func = func.split(',')
+        try:
+            func[0] = func[0].strip()
+            func[1] = func[1].strip()
+        except Exception:
+            print("Error in function file_entry: Argument may be missing a comma.")
+            sys.exit()
+
+    return algae_type, start, varbs, ens, end, plot, monthly, grid, sample, mask, output, covary, hist, lb, save_ext, func
 
 
 def user_entry():
@@ -197,12 +215,9 @@ def user_entry():
     - If day and month is not given, 31 Dec will be used as the end date i.e 2020 => 2020-12-31""")
     parser.add_argument('-v', '--vars', nargs='+', metavar="variables", help="<Required> Variables of data to analyse",
                         required=True)
-    parser.add_argument('-p', '--plot', nargs=2, metavar=("ensemble_number", "date"), help="""Plot map, histogram and timeseries graphs
-    E.g. --plot 1 2005-03-25
-    Format of date : YYYY-MM-DD
-    - map : needs ensemble number and date to plot
-    - histogram : needs ensemble number to plot
-    - timeseries : needs ensemble number to plot""")
+    parser.add_argument('-p', '--plot', nargs=1, metavar=("ensemble_number"), help="""Plot map, histogram and timeseries graphs
+    E.g. --plot 1
+    The ensemble to plot must be included. """)
     parser.add_argument('-m', '--monthly', action="store_true", help="Data in file is stored in monthly increments.")
     group = parser.add_mutually_exclusive_group()
     group.add_argument('-g', '--grid', nargs=2, type=float, metavar=("lat", "lon"), help="Uses grid point that "
@@ -232,10 +247,22 @@ def user_entry():
     "options are listed in: \n"
     "https://docs.scipy.org/doc/numpy/reference/generated/numpy.histogram_bin_edges.html#numpy.histogram_bin_edges")
     parser.add_argument('-se', '--save_extract', action="store_true", help="Save extracted (iris.cube) data in pkl file.")
+    parser.add_argument('-u', '--user', nargs=2, metavar=('file_name', 'function_name'),
+                        help="""Use function written by the user and stored in user_function folder for analysis. 
+                        file_name : name of file that contains function in user_function folder
+                        function_name : name of function to call 
+                        Note: user functions are expected to only take in a cube as an argument. An example of a function 
+                        can be found in user_function/example_function.py
+                        """)
+
+    # Log output
+    old_stdout = sys.stdout
+    log_file = open("message.log", "w")
+    sys.stdout = log_file
 
     # Initialise the variables
     algae_type, varbs, start, end, ens, monthly, lat, lon, grid, sample, mask, output, covary, hist, plot, \
-        lon_bounds, save_ext = None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None
+        lon_bounds, save_ext, func = None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None
     argv = None
     loaded_data = None
     saved, ens_files, abs_files, full_saved = None, None, None, None
@@ -243,9 +270,9 @@ def user_entry():
 
     # If no arguments are given, use input file
     if len(sys.argv) == 1:
-        algae_type, start, varbs, ens, end, plot, monthly, grid, sample, mask, output, covary, hist, lon_bounds, save_ext = file_entry()
+        algae_type, start, varbs, ens, end, plot, monthly, grid, sample, mask, output, covary, hist, lon_bounds, save_ext, func = file_entry()
     elif len(sys.argv) == 2 and (sys.argv[1] == '-ex' or sys.argv[1] == '--example'):
-        algae_type, start, varbs, ens, end, plot, monthly, grid, sample, mask, output, covary, hist, lon_bounds, save_ext = file_entry(example=True)
+        algae_type, start, varbs, ens, end, plot, monthly, grid, sample, mask, output, covary, hist, lon_bounds, save_ext, func = file_entry(example=True)
     elif len(sys.argv) == 2 and sys.argv[1][-3:] == 'pkl':  # Get pickle file to open
         loaded_data = sys.argv[1]
         # Check that it is a pickle file
@@ -275,6 +302,7 @@ def user_entry():
         hist = args.hist
         lon_bounds = args.lon_bounds
         save_ext = args.save_extract
+        func = args.user
 
     # If not loading data from pickle file, then get from command line
     if loaded_data is None:
@@ -312,7 +340,7 @@ def user_entry():
         print("Number of ensembles:", ens)
         if plot:
             print("Plotting option selected.")
-            argv = argv + ' -p' + str(plot[0]) + ' ' + str(plot[1])
+            argv = argv + ' -p' + str(plot[0])
         if monthly:
             print("Monthly date expected.")
             argv = argv + ' -m'
@@ -345,6 +373,10 @@ def user_entry():
 
         print("Histogram bin selection option:", hist)
 
+        if func:
+            print("User function given: " + str(func[0]) + ", " + str(func[1]))
+            argv = argv + ' -u ' + func[0] + ' ' + func[1]
+
         if lon_bounds:
             print("Longitude centering option selected.")
             argv = argv + ' -lb ' + str(lon_bounds[0]) + ' ' + str(lon_bounds[1])
@@ -373,6 +405,7 @@ def user_entry():
         args_dict['plot'] = plot
         args_dict['argv'] = argv
         args_dict['mask'] = mask
+        args_dict['func'] = func
 
         # Save data to pickle file
         if save_ext:
@@ -386,7 +419,13 @@ def user_entry():
         saved, ens_files, abs_files, args_dict, full_saved = load_extract_data_from_file(loaded_data)
 
     # COMPUTE ANALYSIS
-    ens_stats, analysis_str = compute_stats_analysis(saved, analysis='all')
+    # user analysis
+    func, user_ens_stats, ens_stats, func_name, analysis_str = None, None, None, None, None
+    if args_dict['func']:
+        file_name, func_name = func[0], func[1]
+        user_ens_stats = compute_user_analysis(saved, file_name, func_name)
+    else:
+        ens_stats, analysis_str = compute_stats_analysis(saved, analysis='all')
 
     # GET MASK
     full_mask = None
@@ -397,19 +436,33 @@ def user_entry():
 
     # PLOTTING
     plot = args_dict['plot']
-    if plot:
+    if plot is not None:
         plot_ens_num = int(plot[0])
-        plot_date = plot[1]
-        dt = datetime.strptime(plot_date, "%Y-%m-%d")
-        if args_dict['lat']is None:
-            plot_graph(saved, [dt.day, dt.month, dt.year], args_dict['varbs'], mask=full_mask, save_out=args_dict['save_out'], ens_num=plot_ens_num)
-        else:
-            plot_graph(full_saved, [dt.day, dt.month, dt.year], args_dict['varbs'], mask=full_mask, save_out=args_dict['save_out'], ens_num=plot_ens_num, lat=args_dict['lat'], lon=args_dict['lon'])
+
+        # Only plot map of analysis if using analysis: mean, median, std or rms and NOT grid/sample point
+        if args_dict['lat'] is None:
+            plot_map(ens_stats, args_dict['varbs'], mask=full_mask, save_out=args_dict['save_out'], ens_num=plot_ens_num, analysis_str=analysis_str)
+        # Plot histogram
         create_histogram(saved, args_dict['start'], args_dict['end'], args_dict['varbs'], sel=args_dict['hist'], save_out=args_dict['save_out'], ens_num=plot_ens_num)
-        create_timeseries(saved, args_dict['start'], args_dict['end'], args_dict['varbs'], save_out=args_dict['save_out'], ens_num=plot_ens_num)
+        # Plot time series and boxplot
+        if func is not None:
+            create_timeseries(user_ens_stats, args_dict['start'], args_dict['end'], args_dict['varbs'], save_out=args_dict['save_out'], ens_num=plot_ens_num, func_name=func_name)
+        else:
+            create_timeseries(saved, args_dict['start'], args_dict['end'], args_dict['varbs'], save_out=args_dict['save_out'], ens_num=plot_ens_num, func_name=func_name)
 
     # WRITE ANALYSIS TO NETCDF FILE
-    write_means_to_netcdf_file(ens_files, abs_files, ens_stats, analysis_str, args_dict['varbs'], args_dict['start'], args_dict['end'], args_dict['argv'], test=True)
+    if func:
+        write_user_analysis_to_netcdf_file(ens_files, abs_files, user_ens_stats, func_name, args_dict['varbs'], args_dict['start'], args_dict['end'], args_dict['argv'], test=True)
+    else:
+        write_means_to_netcdf_file(ens_files, abs_files, ens_stats, analysis_str, args_dict['varbs'], args_dict['start'], args_dict['end'], args_dict['argv'], test=True)
+
+    # End logging
+    sys.stdout = old_stdout
+    log_file.close()
 
     # Show graphs
     plt.show()
+
+    # compute_enso_indices()
+
+

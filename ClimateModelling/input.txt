@@ -54,6 +54,7 @@ Covary: False
 Histogram bin selection: fd
 Longitude centre:
 Save extract data: False
+User function:
 #
 #
 # ------------------------------------------------------------------------------
@@ -140,4 +141,10 @@ Save extract data: False
 #        e.g. -180, 180
 # ------
 # Save extract data: True/False: Save iris cubes from ensembles into a pickle file.
+# ------
+# User function: File name, Function name
+#       Use function written by the user and stored in user_function folder for analysis.
+#              file_name : name of file that contains function in user_function folder
+#              function_name : name of function to call
+#       Note: user functions are expected to only take in a cube as an argument. An example of a function
 #
