@@ -252,3 +252,64 @@ def is_nested_list(l):
     :return: boolean
     """
     return any(isinstance(i, list) for i in l)
+
+
+def find_middle(arr):
+    """
+    Gets the middle of an array
+    :param arr: array
+    :return: middle of array, middle index
+    """
+    middle = float(len(arr))/2
+    if middle % 2 != 0:
+        return arr[int(middle - .5)], int(middle)
+    return arr[int(middle)], int(middle)
+
+
+def get_shift_value(old_centre, new_centre):
+    """
+    Calculates how much to shift old_centre to the new_centre
+    :param old_centre: float
+    :param new_centre: float
+    :return:
+    """
+
+    diff = old_centre - new_centre
+    if old_centre < new_centre:  # <=
+        if diff > 0:
+            return -diff
+    if new_centre > old_centre:  # =>
+        if diff < 0:
+            return -diff
+    return diff
+
+
+def shift_by_index(values, new_centre):
+    """
+    Get number of shifts necessary to shift values to new centre
+    :param values: values of floats
+    :param new_centre: float
+    :return: int
+    """
+
+    mid, mid_indx = find_middle(values)
+
+    count = 0
+
+    # Shift to the left
+    if mid < new_centre:
+        for i in range(mid_indx, len(values)):
+            if values[i] <= new_centre:
+                count += 1
+        count = -count
+    # Shift to the right
+    elif mid > new_centre:
+        for i in range(mid_indx + 1, -1, -1):
+            if values[i] >= new_centre:
+                count += 1
+
+    return count
+
+
+
+

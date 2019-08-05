@@ -139,12 +139,10 @@ def file_entry(example=False):
 
     # Check for longitude centre
     if args[13]:
-        lb = args[13].split(',')
         try:
-            lb[0] = float(lb[0].strip())
-            lb[1] = float(lb[1].strip())
+            lb = [float(lb.strip())]
         except Exception:
-            print("Error in function file_entry: Argument may be missing a comma.")
+            print("Error in function file_entry: Longitude centre may not be a float.")
             sys.exit()
 
     # Get variables and put in list
@@ -226,9 +224,7 @@ def user_entry():
     group.add_argument('-s', '--sample', nargs=2, type=float, metavar=("lat", "lon"), help="Uses sample point given by"
                                                                                            " latitude and longitude "
                                                                                            "using interpolation.")
-    group.add_argument('-lb', '--lon_bounds', nargs=2, type=float, metavar=("low", "high"), help="Range of longitude "
-                                                                                                "values to centre around"
-                                                                                                "e.g -180, 180")
+    group.add_argument('-lc', '--lon_centre', nargs=1, type=float, help="Longitude to centre map on.")
     parser.add_argument('-mk', '--mask', nargs=1, metavar="filename", help="Uses masking grid given as a file "
                                                                            "(contains boolean array to be imposed on "
                                                                            "the global grid).")
@@ -262,7 +258,7 @@ def user_entry():
 
     # Initialise the variables
     algae_type, varbs, start, end, ens, monthly, lat, lon, grid, sample, mask, output, covary, hist, plot, \
-        lon_bounds, save_ext, func = None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None
+        lon_centre, save_ext, func = None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None
     argv = None
     loaded_data = None
     saved, ens_files, abs_files, full_saved = None, None, None, None
@@ -270,9 +266,9 @@ def user_entry():
 
     # If no arguments are given, use input file
     if len(sys.argv) == 1:
-        algae_type, start, varbs, ens, end, plot, monthly, grid, sample, mask, output, covary, hist, lon_bounds, save_ext, func = file_entry()
+        algae_type, start, varbs, ens, end, plot, monthly, grid, sample, mask, output, covary, hist, lon_centre, save_ext, func = file_entry()
     elif len(sys.argv) == 2 and (sys.argv[1] == '-ex' or sys.argv[1] == '--example'):
-        algae_type, start, varbs, ens, end, plot, monthly, grid, sample, mask, output, covary, hist, lon_bounds, save_ext, func = file_entry(example=True)
+        algae_type, start, varbs, ens, end, plot, monthly, grid, sample, mask, output, covary, hist, lon_centre, save_ext, func = file_entry(example=True)
     elif len(sys.argv) == 2 and sys.argv[1][-3:] == 'pkl':  # Get pickle file to open
         loaded_data = sys.argv[1]
         # Check that it is a pickle file
@@ -300,7 +296,7 @@ def user_entry():
         output = args.output
         covary = args.covary
         hist = args.hist
-        lon_bounds = args.lon_bounds
+        lon_centre = args.lon_centre
         save_ext = args.save_extract
         func = args.user
 
@@ -377,9 +373,10 @@ def user_entry():
             print("User function given: " + str(func[0]) + ", " + str(func[1]))
             argv = argv + ' -u ' + func[0] + ' ' + func[1]
 
-        if lon_bounds:
+        if lon_centre:
+            lon_centre = lon_centre[0]
             print("Longitude centering option selected.")
-            argv = argv + ' -lb ' + str(lon_bounds[0]) + ' ' + str(lon_bounds[1])
+            argv = argv + ' -lc ' + str(lon_centre)
 
         # Call functions to perform analysis
         start = [day_s, mon_s, yr_s]
@@ -387,7 +384,7 @@ def user_entry():
 
         # Extract data from files
         saved, ens_files, abs_files, full_saved = extract_data(algae_type, varbs, start, end, ens,
-                                                monthly=monthly, lat=lat, lon=lon, grid=grid, lon_bounds=lon_bounds)
+                                                monthly=monthly, lat=lat, lon=lon, grid=grid, lon_centre=lon_centre)
 
         # Put all values in dictionary
         args_dict['algae_type'] = algae_type
@@ -399,7 +396,7 @@ def user_entry():
         args_dict['lat'] = lat
         args_dict['lon'] = lon
         args_dict['grid'] = grid
-        args_dict['lon_bounds'] = lon_bounds
+        args_dict['lon_centre'] = lon_centre
         args_dict['save_out'] = output
         args_dict['hist'] = hist
         args_dict['plot'] = plot

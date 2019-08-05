@@ -46,13 +46,13 @@ Number of ensembles: 2
 End date of analysis: 1954
 Plot: 1
 Monthly: False
-Grid: 14.5, -27.5
+Grid:
 Sample:
 Mask file:
 Save Output: True
 Covary: False
 Histogram bin selection: fd
-Longitude centre:
+Longitude centre: 45
 Save extract data: True
 User function:
 #
@@ -134,9 +134,8 @@ User function:
 # For more detailed explanations, go to:
 # https://docs.scipy.org/doc/numpy/reference/generated/numpy.histogram_bin_edges.html#numpy.histogram_bin_edges
 # ------
-# Longitude centre: Low, High
-#        Wraps longitude values between low and high.
-#        e.g. -180, 180
+# Longitude centre: Centre
+#        Longitude to centre map on.
 # ------
 # Save extract data: True/False: Save iris cubes from ensembles into a pickle file.
 # ------
