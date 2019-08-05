@@ -10,7 +10,7 @@ import math
 
 
 def extract_data(algae_type, variables, start_date, end_date, num_ens, monthly=False, lat=None, lon=None,
-                 grid=None, lon_bounds=None, test=True):
+                 grid=None, lon_centre=None, test=True):
     """
     Extracts the data given by the user and stores them
     :param algae_type: name of prefix of filename to look into
@@ -22,7 +22,7 @@ def extract_data(algae_type, variables, start_date, end_date, num_ens, monthly=F
     :param lat: latitude, set if grid or sample point, floats
     :param lon: longitude, set if grid or sample point, floats
     :param grid: set if grid point is given
-    :param lon_bounds: longitude center range, tuple
+    :param lon_centre: longitude center , float
     :return: dictionary storing arrays or list of arrays:
             e.g. if only one file inputted and variables = ['temp', 'sal'], then
                 dict = {'temp': [...], 'sal': [...]
@@ -133,10 +133,36 @@ def extract_data(algae_type, variables, start_date, end_date, num_ens, monthly=F
             # Update lon and lat name
             lon_name, lat_name = const_lon_name, const_lat_name
 
-            # Centre to new longitude bounds
+            # Centre to new longitude centre
             lons = cube.coord(lon_name).points
-            if lon_bounds:
-                lons = iris.analysis.cartography.wrap_lons(lons, lon_bounds[0], lon_bounds[1] - lon_bounds[0])
+            if lon_centre is not None:
+                # Move longitude centre
+                lon_range = len(lons)
+                lon_low = lon_centre - lon_range / 2
+                lon_high = lon_centre + lon_range / 2
+                lons = iris.analysis.cartography.wrap_lons(lons, lon_low, lon_high - lon_low)
+                count = shift_by_index(lons, lon_centre)
+                lons.sort()
+
+                # Get axis number
+                coords = cube.dim_coords
+                axis = 0
+                for j in coords:
+                    if j.name() == lon_name:
+                        break
+                    axis += 1
+
+                # Move map centre and replace data
+                shifted_cube = np.roll(cube.data, count, axis=axis)
+                cube.data = shifted_cube
+                dim_coord = cube.coord(lon_name)
+                centred_coord = iris.coords.AuxCoord(lons, standard_name=dim_coord.standard_name,
+                                                     units=dim_coord.units,
+                                                     long_name=dim_coord.long_name, var_name=dim_coord.var_name,
+                                                     attributes=dim_coord.attributes, bounds=dim_coord.bounds)
+                # Replace coordinate
+                cube.replace_coord(centred_coord)
+
             if sample or grid:
                 # Save interpolated values
                 found_grid = None
@@ -163,29 +189,10 @@ def extract_data(algae_type, variables, start_date, end_date, num_ens, monthly=F
                 # TODO: what if variable = Nan ???
                 saved[i][var] = found_grid
 
-                # If longitude centre given, then change current coord data to centred data
-                if lon_bounds:
-                    dim_coord = cube.coord(lon_name)
-                    centred_coord = iris.coords.AuxCoord(lons, standard_name=dim_coord.standard_name,
-                                                         units=dim_coord.units,
-                                                         long_name=dim_coord.long_name, var_name=dim_coord.var_name,
-                                                         attributes=dim_coord.attributes, bounds=dim_coord.bounds)
-                    # Replace coordinate
-                    cube.replace_coord(centred_coord)
                 # Save original cube
                 orig_saved[i][var] = cube
 
             else:
-                # If longitude centre given, then change current coord data to centred data
-                if lon_bounds:
-                    dim_coord = cube.coord(lon_name)
-                    centred_coord = iris.coords.AuxCoord(lons, standard_name=dim_coord.standard_name,
-                                                             units=dim_coord.units,
-                                                             long_name=dim_coord.long_name, var_name=dim_coord.var_name,
-                                                             attributes=dim_coord.attributes, bounds=dim_coord.bounds)
-                    # Replace coordinate
-                    cube.replace_coord(centred_coord)
-
                 saved[i][var] = cube
 
     print("function extract_data: Data successfully extracted from files.")

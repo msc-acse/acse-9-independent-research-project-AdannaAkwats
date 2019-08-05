@@ -136,9 +136,8 @@ User function:
 # For more detailed explanations, go to:
 # https://docs.scipy.org/doc/numpy/reference/generated/numpy.histogram_bin_edges.html#numpy.histogram_bin_edges
 # ------
-# Longitude centre: Low, High
-#        Wraps longitude values between low and high.
-#        e.g. -180, 180
+# Longitude centre: Centre
+#        Longitude to centre map on.
 # ------
 # Save extract data: True/False: Save iris cubes from ensembles into a pickle file.
 # ------

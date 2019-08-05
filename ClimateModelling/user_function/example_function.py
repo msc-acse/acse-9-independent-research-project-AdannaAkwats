@@ -15,7 +15,6 @@ def max_lon_lat(cube):
     :return: iris.cube containing time coordinate
     """
 
-
     max_cube = cube.collapsed(['longitude', 'latitude'], iris.analysis.MAX)
 
     # print(max_cube)

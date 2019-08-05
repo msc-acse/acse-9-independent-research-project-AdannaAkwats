@@ -2,7 +2,6 @@ import matplotlib.pyplot as plt
 from utils import *
 import iris
 import iris.plot as iplt
-import iris.quickplot as qplt
 import pandas as pd
 import seaborn as sns
 from iris.pandas import as_data_frame, as_series
@@ -263,46 +262,44 @@ def plot_map(list_ens, variables, analysis_str=None, mask=None, ens_num=1, save_
             # Plot title name
             title_name = analysis_str[a] + " of " + cube.name() + " of ensemble " + str(ens_num) + " with variable " + str(variable)
 
-            sns.set()
             # Plot the graph
-            fig, ax = plt.subplots()
+            fig, ax = plt.subplots(figsize=(11, 4))
             # Get the Purples "Brewer" palette for plot
             brewer_cmap = plt.get_cmap('brewer_Purples_09')
 
             # Draw the contours, with n-levels set for the map colours
             lats = cube.coord('latitude')
             lons = cube.coord('longitude')
+            masked_array = np.ma.array(cube.data, mask=np.isnan(cube.data))
+
+            cf = None
             try:
-                qplt.contourf(cube, cmap=brewer_cmap)
+                # qplt.contourf(cube, cmap=brewer_cmap)
+                cf = ax.contourf(lons.points, lats.points, masked_array, cmap=brewer_cmap)
+
             except Exception:
                 print("Error in function plot_map: cube is not 2D.")
                 return None
             # cube.intersection(longitude=(-45, 45))  # get specific range
-            plt.xlabel("Longitude (" + str(lons.units) + ")")
-            plt.ylabel("Latitude (" + str(lats.units) + ")")
-
-            # x and y axis
-            x_btm, x_top = plt.xlim()
-            y_btm, y_top = plt.ylim()
-
-            plt.xticks(np.arange(x_btm,  x_top, step=20))
-            plt.yticks(np.arange(y_btm,  y_top, step=30))
+            fig.colorbar(cf, ax=ax, label=cube.units)
+            ax.set_xlabel("Longitude (" + str(lons.units) + ")")
+            ax.set_ylabel("Latitude (" + str(lats.units) + ")")
 
             # Add a citation to the plot.
             iplt.citation(iris.plot.BREWER_CITE)
 
             # Plot X on map if point is given
             if lon is not None:
-                plt.scatter(lon, lat, s=100, c='black', marker='x', label="Point (" + str(lon) + ", " + str(lat) + ")")
+                ax.scatter(lon, lat, s=100, c='black', marker='x', label="Point (" + str(lon) + ", " + str(lat) + ")")
 
             # Overlay mask
             xs, ys = mask
             if xs is not None:
                 for i in range(len(xs)):
-                    plt.fill(xs[i], ys[i], alpha=0.7, label='Mask')
+                    ax.fill(xs[i], ys[i], alpha=0.7, label='Mask')
                 title_name = "Applied masks to " + cube.name() + " with variable " + str(variable)
 
-            plt.title(title_name)
+            ax.set_title(title_name)
 
             # Have legend if mask or point
             if lon is not None or xs is not None:
