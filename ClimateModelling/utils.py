@@ -167,11 +167,16 @@ def get_polygons(mask_file):
     """
     Load mask file which contains masks - the polygons indices (longitude, latitude) to separate the grids into regions
     :param mask_file: mask file name, string
-    :return: nested list of  polygons indices, each list represents each mask
+    :return:
+        nested list of  polygons indices, each list represents each mask
+        level of depth
+
     """
 
     # Mask file expected to have only one list of polygons
     # Comments in file can have '#' at the start of the line
+
+    converted, level = None, None
 
     # open a file using with statement
     with open(mask_file, 'r') as fh:
@@ -179,16 +184,32 @@ def get_polygons(mask_file):
             # check if the current line
             # starts with "#"
             if "#" not in curline and len(curline) > 1:
+                # Get level if level key seen
+                if 'level' in curline:
+                    try:
+                        level = curline.split(':')[1].strip()
+                    except Exception:
+                        print("Error in function get_polygons: Argument may be missing a semi-colon.")
+                        print(
+                            "Please see mask_example.out for an example of what kind of string is expected to contruct "
+                            "polygons.")
+                        sys.exit()
+                    try:
+                        level = int(level)
+                    except Exception:
+                        print("Error in function get_polygons: Level number is not recongised as an integer.")
+                        sys.exit()
                 # convert string to nested list of tuples
-                try:
-                    converted = ast.literal_eval(curline)
-                except Exception:
-                    print("Error in function get_polygons : List not constructed properly in mask file.")
-                    print("Please see mask_example.out for an example of what kind of string is expected to contruct "
-                          "polygons.")
-                    sys.exit()
-                return converted
-    return None
+                else:
+                    try:
+                        converted = ast.literal_eval(curline)
+                    except Exception:
+                        print("Error in function get_polygons: List not constructed properly in mask file.")
+                        print("Please see mask_example.out for an example of what kind of string is expected to contruct "
+                              "polygons.")
+                        sys.exit()
+
+    return converted, level
 
 
 def make_into_file_name(str):
@@ -286,7 +307,7 @@ def get_shift_value(old_centre, new_centre):
 
 def shift_by_index(values, new_centre):
     """
-    Get number of shifts necessary to shift values to new centre
+    Get number of shifts necessary to shift values to new centre and difference between old and new centre
     :param values: values of floats
     :param new_centre: float
     :return: int
@@ -308,7 +329,7 @@ def shift_by_index(values, new_centre):
             if values[i] >= new_centre:
                 count += 1
 
-    return count
+    return count, mid - new_centre
 
 
 
