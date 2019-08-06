@@ -1,5 +1,6 @@
 # Mask file expected to have only one list of polygons
 # Comments in file can have '#' at the start of the line
 # Each polygon is a list of tuples of integers
-#[[(0, 0), (100, 0), (50, 120), (0, 100)], [(0, 100), (50, 120), (0, 200), (100, 200)], [(100, 0), (360, 0), (50, 120), (360, 100)], [(50, 120), (360, 100), (100, 200), (360, 200)]]
-[[(45, -52), (45, 50), (-75, 50), (-112, 0), (-112, -52)], [(-150, 50), (-200, 50), (-200, 0), (-150,0)]]
+# level is the depth level of mask. If this is not specified, then all levels of data are used.
+[(-25, -40), (75, -40), (-25, 40), (75,40)]
+level: 20

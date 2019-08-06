@@ -224,12 +224,11 @@ def create_timeseries(list_ens, start_date, end_date, variables,  monthly=False,
         # axs[2].set_ylabel(cube.name())
 
 
-def plot_map(list_ens, variables, analysis_str=None, mask=None, ens_num=1, save_out=False, lat=None, lon=None, func_name=None):
+def plot_map(list_ens, variables, analysis_str=None, ens_num=1, save_out=False, lat=None, lon=None, func_name=None):
     """
     Plot (and save) maps given date and variable in cube
     :param list_ens: the list of ensembles (dicts) containing the data of the climate variables
     :param variables: variables to select in cube
-    :param mask: if given, plot with mask applied
     :param ens_num: gives which ensemble to plot, default = 1
     :param save_out: if set, then saves to png file
     :param lat: latitude, float, if given, mark on graph
@@ -272,11 +271,8 @@ def plot_map(list_ens, variables, analysis_str=None, mask=None, ens_num=1, save_
             lons = cube.coord('longitude')
             masked_array = np.ma.array(cube.data, mask=np.isnan(cube.data))
 
-            cf = None
             try:
-                # qplt.contourf(cube, cmap=brewer_cmap)
                 cf = ax.contourf(lons.points, lats.points, masked_array, cmap=brewer_cmap)
-
             except Exception:
                 print("Error in function plot_map: cube is not 2D.")
                 return None
@@ -292,17 +288,17 @@ def plot_map(list_ens, variables, analysis_str=None, mask=None, ens_num=1, save_
             if lon is not None:
                 ax.scatter(lon, lat, s=100, c='black', marker='x', label="Point (" + str(lon) + ", " + str(lat) + ")")
 
-            # Overlay mask
-            xs, ys = mask
-            if xs is not None:
-                for i in range(len(xs)):
-                    ax.fill(xs[i], ys[i], alpha=0.7, label='Mask')
-                title_name = "Applied masks to " + cube.name() + " with variable " + str(variable)
+            # # Overlay mask
+            # xs, ys = mask
+            # if xs is not None:
+            #     for i in range(len(xs)):
+            #         ax.fill([-112, -112, -75, 45, 45], ys[i], alpha=0.7, label='Mask')
+            #     title_name = "Applied masks to " + cube.name() + " with variable " + str(variable)
 
             ax.set_title(title_name)
 
             # Have legend if mask or point
-            if lon is not None or xs is not None:
+            if lon is not None:
                 plt.legend(frameon=True)
 
             if save_out:

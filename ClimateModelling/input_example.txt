@@ -48,11 +48,11 @@ Plot: 1
 Monthly: False
 Grid:
 Sample:
-Mask file:
+Mask file: mask_example.out
 Save Output: True
 Covary: False
 Histogram bin selection: fd
-Longitude centre: 45
+Longitude centre: 0
 Save extract data: True
 User function:
 #

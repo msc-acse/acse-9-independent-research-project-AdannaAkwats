@@ -377,6 +377,8 @@ def user_entry():
             lon_centre = lon_centre[0]
             print("Longitude centering option selected.")
             argv = argv + ' -lc ' + str(lon_centre)
+        elif not lon_centre:
+            lon_centre = None
 
         # Call functions to perform analysis
         start = [day_s, mon_s, yr_s]
@@ -384,7 +386,8 @@ def user_entry():
 
         # Extract data from files
         saved, ens_files, abs_files, full_saved = extract_data(algae_type, varbs, start, end, ens,
-                                                monthly=monthly, lat=lat, lon=lon, grid=grid, lon_centre=lon_centre)
+                                                monthly=monthly, lat=lat, lon=lon, grid=grid, lon_centre=lon_centre,
+                                                               maskfile=mask)
 
         # Put all values in dictionary
         args_dict['algae_type'] = algae_type
@@ -422,14 +425,7 @@ def user_entry():
         file_name, func_name = func[0], func[1]
         user_ens_stats = compute_user_analysis(saved, file_name, func_name)
     else:
-        ens_stats, analysis_str = compute_stats_analysis(saved, analysis='all')
-
-    # GET MASK
-    full_mask = None
-    if lat is None:
-        full_mask = xs, ys = get_mask(saved, args_dict['mask'])
-    else:
-        full_mask = xs, ys = get_mask(full_saved, args_dict['mask'])
+        ens_stats, analysis_str = compute_stats_analysis(saved, analysis='mean')
 
     # PLOTTING
     plot = args_dict['plot']
@@ -438,7 +434,8 @@ def user_entry():
 
         # Only plot map of analysis if using analysis: mean, median, std or rms and NOT grid/sample point
         if args_dict['lat'] is None:
-            plot_map(ens_stats, args_dict['varbs'], mask=full_mask, save_out=args_dict['save_out'], ens_num=plot_ens_num, analysis_str=analysis_str)
+            plot_map(ens_stats, args_dict['varbs'], save_out=args_dict['save_out'], ens_num=plot_ens_num, analysis_str=analysis_str)
+
         # Plot histogram
         create_histogram(saved, args_dict['start'], args_dict['end'], args_dict['varbs'], sel=args_dict['hist'], save_out=args_dict['save_out'], ens_num=plot_ens_num)
         # Plot time series and boxplot

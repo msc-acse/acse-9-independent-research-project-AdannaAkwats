@@ -1,16 +1,111 @@
 from utils import *
 import directories
 import xarray as xr
+
+
+def warn(*args, **kwargs):
+    pass
+import warnings
+
+warnings.warn = warn
 import iris
 import warnings
 import cartopy.crs as ccrs
 from functools import reduce
 import operator
 import math
+from shapely.geometry import Polygon, Point
+
+
+def contains_points(polygon, xp, yp):
+    """
+    Construct boolean array that shows if coords xp and yp are in polygon
+    :param polygon: shapely.geometry.Polygon
+    :param xp: list of x coordinates
+    :param yp: list of y coordinates
+    :return: boolean array
+    """
+
+    return np.array([Point(x, y).intersects(polygon) for x, y in zip(xp, yp)],
+                    dtype=np.bool)
+
+
+def get_mask(maskfile, cube_data, lons, lats):
+    """
+    Construct mask (boolean) array from mask file
+    :param maskfile: file that contains data for mask
+    :param cube_data: 3D/4D array
+    :param lons: list of longitudes
+    :param lats: list of latitudes
+    :return: extracted data using mask
+    """
+
+    # Assertions
+    assert maskfile is not None
+    assert lons is not None
+    assert lats is not None
+
+    # Get polygons from mask file
+    polygons, level = get_polygons(maskfile)
+
+    # if only one polygon
+    if not is_nested_list(polygons):
+        # Cast nested list as nested list of tuples
+        polygons = [tuple(l) for l in polygons]
+        # Change to 3D polygon
+        polygons = [polygons]
+
+    # Initialise mask array to list of Falses
+    full_mask = [False for _ in range(len(lats) * len(lons))]
+
+    # Go through each polygon in the list
+    for i in range(len(polygons)):
+        # Sort coordinates of polygons to be in clockwise direction
+        center = tuple(map(operator.truediv, reduce(lambda x, y: map(operator.add, x, y), polygons[i]),
+                           [len(polygons[i])] * 2))
+        sorted_poly = sorted(polygons[i], key=lambda coord: (-135 - math.degrees(
+            math.atan2(*tuple(map(operator.sub, coord, center))[::-1]))) % 360)
+
+        # Construct shapely polygon and check for points inside polygon
+        poly = Polygon(sorted_poly)
+        x, y = np.meshgrid(lons, lats)
+
+        # Get mask
+        mask = contains_points(poly, x.ravel(), y.ravel())
+        full_mask = np.logical_or(full_mask,  mask)
+
+    # Reshape mask from 1D to 2D array
+    m = full_mask.reshape(len(lats), len(lons))
+
+    # Increase 2D array to 3D array
+    tiles = None
+    print("lvl", level)
+    cube_shape = cube_data.shape
+    if level is None:
+        level = cube_shape[0]
+    if len(cube_shape) == 3:
+        tiles = (level, 1, 1)
+    elif len(cube_shape) == 4:  # depth is included
+        tiles = (level, cube_shape[1], 1, 1)
+
+    mask_arr = np.tile(m, tiles)
+
+    # Extract data from cube using mask
+    mask_cube = np.ma.array(cube_data[:level], mask=~mask_arr)
+
+    print("SHAPE", mask_cube.shape)
+    print("m", mask_arr.shape)
+
+    # import matplotlib.pyplot as plt
+    # plt.contourf(lons, lats, cube_data[30])
+
+    print("function get_mask: Mask successfully constructed from mask file.")
+
+    return mask_cube
 
 
 def extract_data(algae_type, variables, start_date, end_date, num_ens, monthly=False, lat=None, lon=None,
-                 grid=None, lon_centre=None, test=True):
+                 grid=None, lon_centre=None, maskfile=None, test=True):
     """
     Extracts the data given by the user and stores them
     :param algae_type: name of prefix of filename to look into
@@ -36,6 +131,10 @@ def extract_data(algae_type, variables, start_date, end_date, num_ens, monthly=F
     # Assertions
     assert variables is not None
     assert check_list_date(start_date) and check_list_date(end_date)
+
+    # Check for mask
+    if not maskfile:
+        maskfile = None
 
     # Check if sample point
     sample = False
@@ -133,15 +232,17 @@ def extract_data(algae_type, variables, start_date, end_date, num_ens, monthly=F
             # Update lon and lat name
             lon_name, lat_name = const_lon_name, const_lat_name
 
+            # Get longitude and latitude
+            lons, lats = cube.coord(lon_name).points, cube.coord(lat_name).points
+
             # Centre to new longitude centre
-            lons = cube.coord(lon_name).points
             if lon_centre is not None:
                 # Move longitude centre
                 lon_range = len(lons)
                 lon_low = lon_centre - lon_range / 2
                 lon_high = lon_centre + lon_range / 2
                 lons = iris.analysis.cartography.wrap_lons(lons, lon_low, lon_high - lon_low)
-                count = shift_by_index(lons, lon_centre)
+                count, _ = shift_by_index(lons, lon_centre)
                 lons.sort()
 
                 # Get axis number
@@ -156,93 +257,69 @@ def extract_data(algae_type, variables, start_date, end_date, num_ens, monthly=F
                 shifted_cube = np.roll(cube.data, count, axis=axis)
                 cube.data = shifted_cube
                 dim_coord = cube.coord(lon_name)
-                centred_coord = iris.coords.AuxCoord(lons, standard_name=dim_coord.standard_name,
+                centred_coord = iris.coords.DimCoord(lons, standard_name=dim_coord.standard_name,
                                                      units=dim_coord.units,
                                                      long_name=dim_coord.long_name, var_name=dim_coord.var_name,
                                                      attributes=dim_coord.attributes, bounds=dim_coord.bounds)
                 # Replace coordinate
                 cube.replace_coord(centred_coord)
 
+            # Reduced cube
+            reduced_cube = None
+
+            # Masking
+            if maskfile is not None:
+                # Get mask array and update cube
+                mask_cube = get_mask(maskfile, cube.data, lons, lats)
+
+                if cube.data.shape != mask_cube.shape:
+                    reduced_cube = cube[:mask_cube.shape[0]]
+                    reduced_cube.data = mask_cube
+                else:
+                    cube.data = mask_cube
+
             if sample or grid:
                 # Save interpolated values
                 found_grid = None
 
                 # Check lat and lon are in grid
-                lats = cube.coord(lat_name).points
                 if not (min(lons) <= lon <= max(lons)) or not (min(lats) <= lat <= max(lats)):
                     print("Error: extract_data function: latitude and longitude are outside grid.")
                     sys.exit()
 
-                # Construct lat and lon to give tp iris cube interpolate function
+                # Construct lat and lon to give to iris cube interpolate function
                 samples = [(lat_name, target_xy[1]), (lon_name, target_xy[0])]
                 if grid:
                     # Uses nearest neighbour interpolation and takes into account spherical distance
-                    found_grid = cube.interpolate(samples, iris.analysis.Nearest())
-                    # found_grid = res.data
+                    if reduced_cube is None:
+                        found_grid = cube.interpolate(samples, iris.analysis.Nearest())
+                    else:
+                        found_grid = reduced_cube.interpolate(samples, iris.analysis.Nearest())
 
                     # If in NaN grid space, tell user
                     if np.isnan(found_grid.data).any():
                         warnings.warn("NaN values found in interpolated grids.")
                 if sample:
-                    found_grid = cube.interpolate(samples, iris.analysis.Linear())
+                    if reduced_cube is None:
+                        found_grid = cube.interpolate(samples, iris.analysis.Linear())
+                    else:
+                        found_grid = reduced_cube.interpolate(samples, iris.analysis.Linear())
 
                 # TODO: what if variable = Nan ???
                 saved[i][var] = found_grid
 
                 # Save original cube
-                orig_saved[i][var] = cube
+                if reduced_cube is None:
+                    orig_saved[i][var] = cube
+                else:
+                    orig_saved[i][var] = reduced_cube
 
             else:
-                saved[i][var] = cube
+                if reduced_cube is None:
+                    saved[i][var] = cube
+                else:
+                    saved[i][var] = reduced_cube
 
     print("function extract_data: Data successfully extracted from files.")
 
     return saved, ens_files, abs_files, orig_saved
-
-
-def get_mask(list_ens, maskfile):
-    """
-    Apply mask on arrays of ensemble data
-    :param list_ens: the list of ensembles (dicts) containing the data of the climate variables
-    :param maskfile: file containing the polygons array of mask to go over grid, string
-    :param plot: shows example plot of the mask over a the first variable and a random time period
-    :return: 2D mask array
-    """
-    # Assertions
-    assert list_ens is not None
-
-    if maskfile is None or not maskfile:
-        return None, None
-
-    # Get polygons from mask file
-    polygons = get_polygons(maskfile)
-    points_x, points_y = [], []
-
-    # if only one polygon
-    if not is_nested_list(polygons):
-        # Cast nested list as nested list of tuples
-        polygons = [tuple(l) for l in polygons]
-        # Change to 3D polygon
-        polygons = [polygons]
-
-    # if multiple polygons
-    # Go through each polygon in the list
-    for i in range(len(polygons)):
-        # Sort coordinates of polygons to be in clockwise direction
-        center = tuple(map(operator.truediv, reduce(lambda x, y: map(operator.add, x, y), polygons[i]),
-                           [len(polygons[i])] * 2))
-        sorted_poly = sorted(polygons[i], key=lambda coord: (-135 - math.degrees(
-            math.atan2(*tuple(map(operator.sub, coord, center))[::-1]))) % 360)
-        polygons[i] = sorted_poly
-
-        xs, ys = [], []
-        for j in range(len(sorted_poly)):
-            xs.append(sorted_poly[j][0])
-            ys.append(sorted_poly[j][1])
-
-        points_x.append(xs)
-        points_y.append(ys)
-
-    print("function get_mask: Mask successfully constructed from mask file.")
-
-    return points_x, points_y
