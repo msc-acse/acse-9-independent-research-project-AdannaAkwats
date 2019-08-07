@@ -7,6 +7,8 @@ import numpy as np
 import directories
 import ast
 import sys
+from collections import defaultdict
+
 
 """
 Script that contains useful functions
@@ -191,21 +193,30 @@ def get_polygons(mask_file):
                     except Exception:
                         print("Error in function get_polygons: Argument may be missing a semi-colon.")
                         print(
-                            "Please see mask_example.out for an example of what kind of string is expected to contruct "
+                            "Please see mask_example.out for an example of what kind of string is expected to construct "
                             "polygons.")
                         sys.exit()
-                    try:
-                        level = int(level)
-                    except Exception:
-                        print("Error in function get_polygons: Level number is not recongised as an integer.")
-                        sys.exit()
+                    if '-' in level:
+                        try:
+                            level = level.split('-')
+                            level[0] = int(level[0].strip())
+                            level[1] = int(level[1].strip())
+                        except Exception:
+                            print("Error in function get_polygons: Level number is not recognised as an integer.")
+                            sys.exit()
+                    else:
+                        try:
+                            level = int(level)
+                        except Exception:
+                            print("Error in function get_polygons: Level number is not recognised as an integer.")
+                            sys.exit()
                 # convert string to nested list of tuples
                 else:
                     try:
                         converted = ast.literal_eval(curline)
                     except Exception:
                         print("Error in function get_polygons: List not constructed properly in mask file.")
-                        print("Please see mask_example.out for an example of what kind of string is expected to contruct "
+                        print("Please see mask_example.out for an example of what kind of string is expected to construct "
                               "polygons.")
                         sys.exit()
 
@@ -330,6 +341,57 @@ def shift_by_index(values, new_centre):
                 count += 1
 
     return count, mid - new_centre
+
+
+def get_bins_from_file(hist_file, variables):
+
+    bin_dict = defaultdict(list)
+
+    with open(hist_file, 'r') as hf:
+        var_seen = False
+        vars_in_file, bins = None, None
+        for curline in hf:
+            # check if the current line
+            # starts with "#"
+            if "#" not in curline and len(curline) > 1:
+                if not var_seen:
+                    # The first element should be the variable name
+                    vars_in_file = curline.split(',')
+                    vars_in_file = [v.strip() for v in vars_in_file]
+                    # Check that variables in file match what has already been given
+                    if not set(variables) == set(vars_in_file):
+                        print("Error in function get_bins_from_file: Variable given in file is not recognised or "
+                              "not all variables are given.")
+                        print("  Please make sure that all variables given in input" + str(variables) + " are included in")
+                        sys.exit()
+                    var_seen = True
+
+                else:  # Get bins
+                    bins = curline.split(',')
+                    if len(bins) != len(vars_in_file):
+                        print("Error in function get_bins_from_file: Number of variables does not match columns of bins.")
+                        print(" Number of variables: " + str(len(vars_in_file)) + ", number of bin columns: " + str(len(bins)) + ".")
+                        sys.exit()
+                    if len(bins) == 1:
+                        try:
+                            bins = [float(bins[0].strip())]
+                        except Exception:
+                            print("Error in function get_bins_from_file: Bin number " + bins[0] +
+                                  " is not recognised as a float.")
+                            sys.exit()
+                    else:  # More than one bin given
+                        try:
+                            bins = [float(b.strip()) for b in bins]
+                        except Exception:
+                            print("Error in function get_bins_from_file: Bin number " + str(bins) +
+                                  " is not recognised as a float.")
+                            sys.exit()
+
+                    # Add to dictionary
+                    for i in range(len(bins)):
+                        bin_dict[vars_in_file[i]].append(bins[i])
+
+    return bin_dict
 
 
 

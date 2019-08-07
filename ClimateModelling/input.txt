@@ -44,6 +44,8 @@ Number of ensembles: 1
 # OPTIONAL ARGUMENTS
 # ------------------------------------------------------------------------------
 End date of analysis:
+Analysis: mean
+Total ensemble stats: True
 Plot:
 Monthly: False
 Grid:
@@ -51,10 +53,11 @@ Sample:
 Mask file:
 Save Output: False
 Covary: False
-Histogram bin selection: fd
+Histogram bin selection: histogram_bins.txt
 Longitude centre:
 Save extract data: False
 User function:
+Calculate areas: True
 #
 #
 # ------------------------------------------------------------------------------
@@ -92,6 +95,19 @@ User function:
 #     i.e. 2020-04 => 2020-04-30
 #   - If day and month is not given, 31 Dec will be used as the end date
 #     i.e. 2020 => 2020-12-31
+# ------
+# Analysis: Analysis performed on data set.
+#    If not specified, then mean will be performed.
+#    Types of analysis that can be selected:
+#    - mean
+#    - std (Standard deviation)
+#    - rms (Root mean squared error)
+#    - median
+#    You can also select a combination of analysis to perform e.g. Analysis: mean, rms
+# ------
+# Total ensemble stats: True/False : The analysis will be performed over the whole ensemble given.
+#    If set True, all the ensembles will be averaged as a collection.
+#    If set False, the ensembles will be averaged individually.
 # ------
 # Plot: Ensemble number, Date : Plot map, histogram and timeseries graphs
 #    E.g. --plot 1 2005-03-25
@@ -135,6 +151,9 @@ User function:
 #    sqrt    - Square root (of data size) estimator
 # For more detailed explanations, go to:
 # https://docs.scipy.org/doc/numpy/reference/generated/numpy.histogram_bin_edges.html#numpy.histogram_bin_edges
+#
+#  If you want to specify the bin edges used in the histogram, you can input the file - an example file is given in
+#  histogram_bins.txt
 # ------
 # Longitude centre: Centre
 #        Longitude to centre map on.
@@ -146,4 +165,8 @@ User function:
 #              file_name : name of file that contains function in user_function folder
 #              function_name : name of function to call
 #       Note: user functions are expected to only take in a cube as an argument. An example of a function
+# ------
+# Calculate areas: True/False: Calculate areas of grid boxes of latitude and longitude and saves to
+#       NetCDF file areas.nc in results folder.
+#
 #

@@ -4,7 +4,7 @@ import importlib
 import directories
 
 
-def compute_stats_analysis(list_ens, analysis='mean'):
+def compute_stats_analysis(list_ens, analysis):
     """
        Analyse the data given - in this case it computes the mean, std, median and rms
        :param list_ens: the list of ensembles (dicts) containing the data of the climate variables
@@ -15,7 +15,8 @@ def compute_stats_analysis(list_ens, analysis='mean'):
        """
     # Assertions
     assert list_ens is not None
-    assert analysis.lower() in ['mean', 'rms', 'std', 'median', 'all']
+
+    analysis = [a.lower() for a in analysis]
 
     time_name = 'time'
     # Holds the means for each ensemble
@@ -27,35 +28,32 @@ def compute_stats_analysis(list_ens, analysis='mean'):
         mean_calcs, std_calcs, median_calcs, rms_calcs = {}, {}, {}, {}
         # Calculate the mean of each variable in the dictionary given
         for d in dict_:
-            calc, mean_calc, std_calc, median_calc, rms_calc = None, None, None, None, None
-            if analysis == 'all':  # Calculate all stats
-                mean_calc = dict_[d].collapsed(time_name, iris.analysis.MEAN)
-                std_calc = dict_[d].collapsed(time_name, iris.analysis.STD_DEV)
-                median_calc = dict_[d].collapsed(time_name, iris.analysis.MEDIAN)
-                rms_calc = dict_[d].collapsed(time_name, iris.analysis.RMS)
-            elif analysis.lower() == 'mean':
-                calc = dict_[d].collapsed(time_name, iris.analysis.MEAN)
-            elif analysis.lower() == 'std':
-                calc = dict_[d].collapsed(time_name, iris.analysis.STD_DEV)
-            elif analysis.lower() == 'median':
-                calc = dict_[d].collapsed(time_name, iris.analysis.MEDIAN)
-            elif analysis.lower() == 'rms':
-                calc = dict_[d].collapsed(time_name, iris.analysis.RMS)
-            # Save values to dicts
-            if analysis.lower() == 'all':
-                mean_calcs[d] = mean_calc
-                std_calcs[d] = std_calc
-                median_calcs[d] = median_calc
-                rms_calcs[d] = rms_calc
-            else:
-                calcs[d] = calc
-        if analysis.lower() == 'all':
-            ens_calcs.append([mean_calcs, std_calcs, median_calcs, rms_calcs])
-        else:
-            ens_calcs.append(calcs)
+            for a in analysis:
+                if a == 'mean':
+                    mean_calc = dict_[d].collapsed(time_name, iris.analysis.MEAN)
+                    mean_calcs[d] = mean_calc
+                if a == 'std':
+                    std_calc = dict_[d].collapsed(time_name, iris.analysis.STD_DEV)
+                    std_calcs[d] = std_calc
+                if a == 'median':
+                    median_calc = dict_[d].collapsed(time_name, iris.analysis.MEDIAN)
+                    median_calcs[d] = median_calc
+                if a == 'rms':
+                    rms_calc = dict_[d].collapsed(time_name, iris.analysis.RMS)
+                    rms_calcs[d] = rms_calc
+        calcs = []
+        if 'mean' in analysis:
+            calcs.append(mean_calcs)
+        if 'std' in analysis:
+            calcs.append(std_calcs)
+        if 'median' in analysis:
+            calcs.append(median_calcs)
+        if 'rms' in analysis:
+            calcs.append(rms_calcs)
+        ens_calcs.append(calcs)
     print("function compute_stats_analysis: Averages of data successfully computed.")
 
-    return ens_calcs, analysis.lower()
+    return ens_calcs, analysis
 
 
 def compute_enso_indices():

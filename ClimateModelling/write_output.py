@@ -21,11 +21,8 @@ def write_means_to_netcdf_file(ens_files, abs_files, ens_means, analysis_str, va
     :return: None, files created in folder analysis/ensemble_means
     """
     # Assertions
-    assert ens_files is not None and abs_files is not None and variables is not None
+    assert ens_files is not None and abs_files is not None and variables is not None and analysis_str is not None
     assert check_list_date(start_date) and check_list_date(end_date)
-
-    # For all stats
-    analysis_strs = ['mean', 'std', 'median', 'rms']
 
     # Initialise Nco
     nco = Nco()
@@ -57,34 +54,22 @@ def write_means_to_netcdf_file(ens_files, abs_files, ens_means, analysis_str, va
         # Write means to file
         with Dataset(abs_files[i][0], 'r') as src, Dataset(output_file, 'a') as dest:
             for var in variables:
-                loop = 1
-                if analysis_str == 'all':
-                    loop = len(analysis_strs)
-                for a in range(loop):
+                for a in range(len(analysis_str)):
                     # create dataset identical to original variable in file
-                    mean_var_name = var + '_' + analysis_str
-                    if analysis_str == 'all':
-                        mean_var_name = var + '_' + analysis_strs[a]
+                    mean_var_name = var + '_' + analysis_str[a]
                     datatype = src.variables[var].datatype
                     # Get dimensions without time
                     dims = tuple([j for j in src.variables[var].dimensions if j.lower() != 'time' and j.lower() != 't'])
                     mean_var = dest.createVariable(mean_var_name, datatype, dims)
-                    # save means in variable
-                    if analysis_str == 'all':
-                        cube = ens_means[i][a][var]
-                        mean_var[:] = cube.data
-                    else:
-                        cube = ens_means[i][var]
-                        mean_var[:] = cube.data
+                    # save analysis in variable
+                    cube = ens_means[i][a][var]
+                    mean_var[:] = cube.data
                     mean_var.setncatts(src[var].__dict__)
                     mean_var.long_name = mean_var.long_name + ' averaged between ' + start_end_str
 
             # Write to description and history of file
-            desc_str = "Added " + analysis_str + " of variables " + ', '.join(variables) + " within time period " + \
-                                       start_end_str
-            if analysis_str == 'all':
-                desc_str = "Added " + "mean, standard deviation, RMS and median " + " of variables " + ', '.join(variables) + " within time period " + \
-                           start_end_str
+            desc_str = "Added " + ', '.join(analysis_str) + " of variables " + ', '.join(variables) + " within time period " + \
+                       start_end_str
 
             if 'description' in dest.ncattrs():
                 dest.description = desc_str + ' \n' + dest.description
