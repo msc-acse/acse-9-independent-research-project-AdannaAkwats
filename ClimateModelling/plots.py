@@ -9,7 +9,7 @@ from pandas.plotting import register_matplotlib_converters
 import sys
 
 
-def create_histogram(list_ens, start_date, end_date, variables, monthly=False, save_out=True, sel='fd', ens_num=1):
+def create_histogram(list_ens, start_date, end_date, variables, monthly=False, save_out=True, sel='fd', ens_num=1, cov=False):
     """
     Plot or save histogram data of cube
     :param list_ens: list of ensemble data
@@ -26,6 +26,11 @@ def create_histogram(list_ens, start_date, end_date, variables, monthly=False, s
     assert list_ens is not None
     assert variables is not None
 
+    # If file is given, select the bin edges in the file
+    bins_dict = None
+    if '.' in sel:
+        bins_dict = get_bins_from_file(sel, variables)
+
     # Daily or monthly
     time_str = "daily"
     if monthly:
@@ -38,7 +43,6 @@ def create_histogram(list_ens, start_date, end_date, variables, monthly=False, s
         print("Error: function create_histogram: cannot construct histogram with more than 2-dimensions.")
         sys.exit()
 
-    cov = len(variables) == 2
     # Get flattened data (without nan values) from cubes
     cubes = []
     full_datum = []
@@ -64,42 +68,56 @@ def create_histogram(list_ens, start_date, end_date, variables, monthly=False, s
 
     # Plot histogram
     sns.set()
-    fig, ax = plt.subplots()
-    if not cov:
-        ax.set_title(title_name)
-        ax.hist(full_datum[0], bins=sel, color="skyblue")
-        ax.set_ylabel("Frequency")
-        ax.set_xlabel(cubes[0].name() + ' (' + str(cubes[0].units) + ')')
+    for i in range(len(variables)):
+        if not cov:
+            fig, ax = plt.subplots()
+            ax.set_title(title_name)
+            if bins_dict is None:
+                ax.hist(full_datum[i], bins=sel, color="skyblue")
+            else:
+                ax.hist(full_datum[i], bins=bins_dict[variables[i]], color="skyblue")
+            ax.set_ylabel("Frequency")
+            ax.set_xlabel(cubes[i].name() + ' (' + str(cubes[i].units) + ')')
 
-    else:  # Plot 2D histogram
-        plt.title(title_name)
-        plt.hist2d(full_datum[0], full_datum[1])
-        plt.xlabel(cubes[0].name() + ' (' + str(cubes[0].units) + ')')
-        plt.ylabel(cubes[1].name() + ' (' + str(cubes[1].units) + ')')
-        plt.colorbar(label='Frequency')
+    if cov:  # Plot 2D histogram
+        fig, ax = plt.subplots()
+        ax.set_title(title_name)
+        _, _, _, img = ax.hist2d(full_datum[0], full_datum[1])
+        ax.set_xlabel(cubes[0].name() + ' (' + str(cubes[0].units) + ')')
+        ax.set_ylabel(cubes[1].name() + ' (' + str(cubes[1].units) + ')')
+        plt.colorbar(img, ax=ax, label='Frequency')
 
     if save_out:
         # Construct file name
         title_name = " " + time_str + " " + str(start_date[2]) + "-" + str(start_date[1]) + "-" + \
             str(start_date[0]) + "_" + str(end_date[2]) + "-" + str(end_date[1]) + "-" + str(end_date[0])
 
-        if not cov:
-            title_name = "hist_" + cubes[0].name() + title_name
-            title_name = make_into_file_name(title_name)
-            file = open(os.path.join(directories.ANALYSIS, title_name), 'w')
-            # Write header of file
-            file.write("# " + cubes[0].name() + "," + "Frequency\n")
-            # Get histogram data and write to file
-            hist, bins = np.histogram(full_datum[0], bins=sel)
-            data = list(zip(bins, hist))
-            np.savetxt(file, data, delimiter=',')
-            file.close()
-        else:
+        for i in range(len(variables)):
+            if not cov:
+                title_name = "hist_" + cubes[i].name() + title_name
+                title_name = make_into_file_name(title_name)
+                file = open(os.path.join(directories.ANALYSIS, title_name), 'w')
+                # Write header of file
+                file.write("# " + cubes[i].name() + "," + "Frequency\n")
+                # Get histogram data and write to file
+                if bins_dict is None:
+                    hist, bins = np.histogram(full_datum[i], bins=sel)
+                else:
+                    hist, bins = np.histogram(full_datum[i], bins=bins_dict[variables[i]])
+                data = list(zip(bins, hist))
+                np.savetxt(file, data, delimiter=',')
+                file.close()
+                plt.savefig(os.path.join(directories.ANALYSIS, title_name))
+        if cov:
             title_name = "hist2D_" + cubes[0].name() + "_" + cubes[1].name() + title_name
             title_name = make_into_file_name(title_name)
             file = open(os.path.join(directories.ANALYSIS, title_name), 'w')
             file.write("# " + cubes[0].name() + "," + cubes[1].name() + "," + "Frequency\n")
-            hist, xs, ys = np.histogram2d(full_datum[0].data, full_datum[1].data)
+            if bins_dict is None:
+                hist, xs, ys = np.histogram2d(full_datum[0].data, full_datum[1].data)
+            else:
+                hist, xs, ys = np.histogram2d(full_datum[0].data, full_datum[1].data,
+                                          bins=[bins_dict[variables[0]], bins_dict[variables[1]]])
             # Remove unnecessary last element
             xs = xs[:-1]
             ys = ys[:-1]
@@ -109,6 +127,8 @@ def create_histogram(list_ens, start_date, end_date, variables, monthly=False, s
                 for j in range(len(ys)):
                     file.write(str(xs[i]) + "," + str(ys[j]) + "," + str(hist[i][j]) + "\n")
             file.close()
+
+            plt.savefig(os.path.join(directories.ANALYSIS, title_name))
 
         print("Histogram data is saved in the " + directories.ANALYSIS + " folder as a txt file.")
 
@@ -244,12 +264,6 @@ def plot_map(list_ens, variables, analysis_str=None, ens_num=1, save_out=False, 
         variables = [variables]
 
     for variable in variables:
-        if analysis_str == 'all':
-            analysis_str = ['mean', 'std', 'median', 'rms']
-        elif analysis_str is not None:
-            analysis_str = [analysis_str]
-        elif func_name is not None:
-            analysis_str = [func_name]
         for a in range(len(analysis_str)):
             # Extract time in cube
             cube = None

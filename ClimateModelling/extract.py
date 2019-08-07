@@ -1,7 +1,8 @@
 from utils import *
 import directories
 import xarray as xr
-
+from netCDF4 import Dataset
+import time
 
 def warn(*args, **kwargs):
     pass
@@ -79,33 +80,72 @@ def get_mask(maskfile, cube_data, lons, lats):
 
     # Increase 2D array to 3D array
     tiles = None
-    print("lvl", level)
     cube_shape = cube_data.shape
     if level is None:
         level = cube_shape[0]
     if len(cube_shape) == 3:
-        tiles = (level, 1, 1)
+        if len(level) == 2:
+            tiles = (level[1] - level[0], 1, 1)
+        else:
+            tiles = (1, 1, 1)
     elif len(cube_shape) == 4:  # depth is included
-        tiles = (level, cube_shape[1], 1, 1)
+        if len(level) == 2:
+            tiles = (1, cube_shape[1], 1, 1)
+        else:
+            tiles = (level[1] - level[0], cube_shape[1], 1, 1)
 
     mask_arr = np.tile(m, tiles)
 
-    # Extract data from cube using mask
-    mask_cube = np.ma.array(cube_data[:level], mask=~mask_arr)
-
-    print("SHAPE", mask_cube.shape)
-    print("m", mask_arr.shape)
-
-    # import matplotlib.pyplot as plt
-    # plt.contourf(lons, lats, cube_data[30])
-
     print("function get_mask: Mask successfully constructed from mask file.")
 
-    return mask_cube
+    return mask_arr, level
+
+
+def calculate_areas(cube, lat_name, lon_name):
+    cube.coord(lat_name).guess_bounds()
+    cube.coord(lon_name).guess_bounds()
+
+    areas_arr = None
+    if len(cube.data.shape) == 3:
+        areas_arr = iris.analysis.cartography.area_weights(cube[0])
+    elif len(cube.data.shape) == 4:
+        areas_arr = iris.analysis.cartography.area_weights(cube[0, 0])
+
+    # Write areas to netcdf
+    file_area = os.path.join(directories.ANALYSIS, "areas.nc")
+    dataset = Dataset(file_area, 'w', format='NETCDF4_CLASSIC')
+
+    # Create dimensions
+    lats = cube.coord(lat_name).points
+    lons = cube.coord(lon_name).points
+    dataset.createDimension('lat', len(lats))
+    dataset.createDimension('lon', len(lons))
+
+    # Create variables
+    latitudes = dataset.createVariable('latitude', np.float32, ('lat',))
+    longitudes = dataset.createVariable('longitude', np.float32, ('lon',))
+    areas = dataset.createVariable('areas', np.float32, ('lat', 'lon'))
+
+    # Global Attributes
+    dataset.description = 'Calculated areas of grid boxes'
+    dataset.history = 'Created by Adanna Akwataghibe (aa14415@ic.ac.uk) on ' + time.ctime(time.time())
+
+    # Variable Attributes
+    latitudes.units = 'degree_north'
+    longitudes.units = 'degree_east'
+    areas.units = 'metres squared'
+
+    # Writing data
+    latitudes[:] = lats
+    longitudes[:] = lons
+    areas[:] = areas_arr
+
+    # Close dataset
+    dataset.close()
 
 
 def extract_data(algae_type, variables, start_date, end_date, num_ens, monthly=False, lat=None, lon=None,
-                 grid=None, lon_centre=None, maskfile=None, test=True):
+                 grid=None, lon_centre=None, maskfile=None, calc_areas=False, total=False, test=True):
     """
     Extracts the data given by the user and stores them
     :param algae_type: name of prefix of filename to look into
@@ -118,6 +158,9 @@ def extract_data(algae_type, variables, start_date, end_date, num_ens, monthly=F
     :param lon: longitude, set if grid or sample point, floats
     :param grid: set if grid point is given
     :param lon_centre: longitude center , float
+    :param maskfile: file that contains mask data, string
+    :param calc_areas: set if areas of grid boxes should be calculated, boolean
+    :param total: if total set, then extract data with combined ensembles (instead of separated into ensembles), boolean
     :return: dictionary storing arrays or list of arrays:
             e.g. if only one file inputted and variables = ['temp', 'sal'], then
                 dict = {'temp': [...], 'sal': [...]
@@ -193,6 +236,10 @@ def extract_data(algae_type, variables, start_date, end_date, num_ens, monthly=F
     # Go through variables in each ensemble
     for i in range(num_ens):
         datasets = xr.open_mfdataset(ens_files[i])
+
+        # If mask set, then compute mask array
+        mask_set, mask_arr, level = False, None, None  # Used to compute mask array only once
+
         for var in variables:
             # Check if variable is in the dataset
             if var not in datasets:  # throw an error and stop
@@ -232,6 +279,11 @@ def extract_data(algae_type, variables, start_date, end_date, num_ens, monthly=F
             # Update lon and lat name
             lon_name, lat_name = const_lon_name, const_lat_name
 
+            # Calculate areas
+            if calc_areas:
+                calculate_areas(cube, lat_name, lon_name)
+                calc_areas = False
+
             # Get longitude and latitude
             lons, lats = cube.coord(lon_name).points, cube.coord(lat_name).points
 
@@ -270,7 +322,12 @@ def extract_data(algae_type, variables, start_date, end_date, num_ens, monthly=F
             # Masking
             if maskfile is not None:
                 # Get mask array and update cube
-                mask_cube = get_mask(maskfile, cube.data, lons, lats)
+                if not mask_set:
+                    mask_arr, level = get_mask(maskfile, cube.data, lons, lats)
+                    mask_set = True
+
+                # Get specific cube.data
+                mask_cube = np.ma.array(cube.data[level[0]:level[1]], mask=~mask_arr)
 
                 if cube.data.shape != mask_cube.shape:
                     reduced_cube = cube[:mask_cube.shape[0]]

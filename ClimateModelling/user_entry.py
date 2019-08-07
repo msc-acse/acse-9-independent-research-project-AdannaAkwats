@@ -30,6 +30,38 @@ def check_valid_order(start_date, end_date):
     return (end - start).days > 0
 
 
+def check_analysis(a):
+    """
+    Check analysis a is valid
+    :param a: list of strings
+    :return: boolesn or throws error
+    """
+
+    # List of analysis that can be selected
+    ans = ['mean', 'rms', 'std', 'median']
+
+    # Check that analysis a is in ans
+    all_elements_contained = all(elem in ans for elem in a)
+
+    if not all_elements_contained:
+        print("Error in function check_analysis: Analysis given cannot be selected. "
+              "Ensure that analysis is one or more of [mean, std, rms, median].")
+        sys.exit()
+    return True
+
+
+def check_variables_covary(varbs):
+    """
+    Check only 2 variables given - this function is called if covariance is set
+    :param varbs: list of variables (string)
+    :return: boolean or throws error
+    """
+    if len(varbs) != 2:  # If not 2 variables, then cannot perform covariance
+        print("Error in function check_variables_covary: Selecting covariance required two variables.")
+        sys.exit()
+    return True
+
+
 def get_date(date_entry, start=True):
     """
     Separate date  d-m-y into day, month and year
@@ -98,7 +130,7 @@ def file_entry(example=False):
             sys.exit()
 
     # Check if any optional arguments are not filled in
-    for i in range(4, 16):
+    for i in range(4, 19):
         if len(args[i]) == 0:
             args[i] = False
         elif args[i].lower() == 'false' or args[i].lower() == 'f':
@@ -106,30 +138,50 @@ def file_entry(example=False):
         elif args[i].lower() == 'true' or args[i].lower() == 't':
             args[i] = True
 
-    # histogram option
-    if len(args[12]) == 0 or not args[12]:
-        hist = 'fd'
+    # Liat of all arguments
+    # Required
+    algae_type = args[0]
+    start = args[1]
+    ens = int(args[3])
 
-    algae_type, start, ens, end = args[0], args[1], int(args[3]), args[4]
-    plot, monthly, grid, sample, mask, output, covary, hist = args[5], args[6], args[7], args[8], args[9], args[10], args[11], args[12]
-    lb = args[13]
-    save_ext = args[14]
-    func = args[15]
+    # Optional
+    end = args[4]
+    analysis = args[5]
+    total = args[6]
+    plot = args[7]
+    monthly = args[8]
+    grid = args[9]
+    sample = args[10]
+    mask = args[11]
+    output = args[12]
+    covary = args[13]
+    hist = args[14]
+    lb = args[15]
+    save_ext = args[16]
+    func = args[17]
+    calc_areas = args[18]
+
+    # Check for analysis
+    if analysis:
+        analysis = analysis.split(',')
+        for i in range(len(analysis)):
+            analysis[i] = analysis[i].strip()
 
     # Check for plot
     if plot:
         plot = [int(plot.strip())]
+
     # Check for grid and sample
-    if args[7]:
-        grid = args[7].split(',')
+    if grid:
+        grid = grid.split(',')
         try:
             grid[0] = float(grid[0].strip())
             grid[1] = float(grid[1].strip())
         except Exception:
             print("Error in function file_entry: Argument may be missing a comma.")
             sys.exit()
-    elif args[8]:
-        sample = args[8].split(',')
+    elif sample:
+        sample = sample.split(',')
         try:
             sample[0] = float(sample[0].strip())
             sample[1] = float(sample[1].strip())
@@ -137,8 +189,12 @@ def file_entry(example=False):
             print("Error in function file_entry: Argument may be missing a comma.")
             sys.exit()
 
+    # Histogram option
+    if len(hist) == 0 or not hist:
+        hist = 'fd'
+
     # Check for longitude centre
-    if args[13]:
+    if lb:
         try:
             lb = [float(lb.strip())]
         except Exception:
@@ -160,7 +216,7 @@ def file_entry(example=False):
             print("Error in function file_entry: Argument may be missing a comma.")
             sys.exit()
 
-    return algae_type, start, varbs, ens, end, plot, monthly, grid, sample, mask, output, covary, hist, lb, save_ext, func
+    return algae_type, start, varbs, ens, end, analysis, total, plot, monthly, grid, sample, mask, output, covary, hist, lb, save_ext, func, calc_areas
 
 
 def user_entry():
@@ -250,7 +306,20 @@ def user_entry():
                         Note: user functions are expected to only take in a cube as an argument. An example of a function 
                         can be found in user_function/example_function.py
                         """)
-
+    parser.add_argument('-a', '--analysis', nargs='?', help="""Analysis performed on data set.
+    If not specified, then all analysis listed below will be performed.
+    Types of analysis:
+    - mean
+    - std (Standard deviation)
+    - rms (Root mean squared error)
+    - median
+    You can also select a combination of analysis to perform e.g. -a mean rms """)
+    parser.add_argument('-ca', '--areas', action="store_true", help="Calculate areas of grid boxes of latitude and"
+                                                                    " longitude and saves to NetCDF file areas.nc in results folder")
+    parser.add_argument('-t', '--total', action="store_true",
+                        help="""Total ensemble stats: True/False : The analysis will be performed over the whole ensemble given.
+                        - If set True, all the ensembles will be averaged as a collection.
+                        - If set False, the ensembles will be averaged individually.""")
     # Log output
     old_stdout = sys.stdout
     log_file = open("message.log", "w")
@@ -259,6 +328,7 @@ def user_entry():
     # Initialise the variables
     algae_type, varbs, start, end, ens, monthly, lat, lon, grid, sample, mask, output, covary, hist, plot, \
         lon_centre, save_ext, func = None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None
+    analysis, calc_areas, total = None, None, None
     argv = None
     loaded_data = None
     saved, ens_files, abs_files, full_saved = None, None, None, None
@@ -266,9 +336,9 @@ def user_entry():
 
     # If no arguments are given, use input file
     if len(sys.argv) == 1:
-        algae_type, start, varbs, ens, end, plot, monthly, grid, sample, mask, output, covary, hist, lon_centre, save_ext, func = file_entry()
+        algae_type, start, varbs, ens, end, analysis, total, plot, monthly, grid, sample, mask, output, covary, hist, lon_centre, save_ext, func, calc_areas = file_entry()
     elif len(sys.argv) == 2 and (sys.argv[1] == '-ex' or sys.argv[1] == '--example'):
-        algae_type, start, varbs, ens, end, plot, monthly, grid, sample, mask, output, covary, hist, lon_centre, save_ext, func = file_entry(example=True)
+        algae_type, start, varbs, ens, end, analysis, total, plot, monthly, grid, sample, mask, output, covary, hist, lon_centre, save_ext, func, calc_areas = file_entry(example=True)
     elif len(sys.argv) == 2 and sys.argv[1][-3:] == 'pkl':  # Get pickle file to open
         loaded_data = sys.argv[1]
         # Check that it is a pickle file
@@ -288,6 +358,8 @@ def user_entry():
         varbs = args.vars
         ens = args.ens[0]
         end = args.end_date
+        analysis = args.analysis
+        total = args.total
         plot = args.plot
         monthly = args.monthly
         grid = args.grid
@@ -299,6 +371,7 @@ def user_entry():
         lon_centre = args.lon_centre
         save_ext = args.save_extract
         func = args.user
+        calc_areas = args.areas
 
     # If not loading data from pickle file, then get from command line
     if loaded_data is None:
@@ -334,9 +407,21 @@ def user_entry():
             print("  - The end date is earlier than the start date")
             sys.exit()
         print("Number of ensembles:", ens)
+
+        if analysis:
+            print("Analysis: ", analysis)
+            a_ = ' '.join(analysis)
+            argv = argv + ' -a ' + a_
+            check_analysis(analysis)
+        else:
+            print("Analysis: ", analysis)
+            analysis = ['mean']
+        if total:
+            print("Total ensemble stats option selected.")
+            argv = argv + ' -t'
         if plot:
             print("Plotting option selected.")
-            argv = argv + ' -p' + str(plot[0])
+            argv = argv + ' -p ' + str(plot[0])
         if monthly:
             print("Monthly date expected.")
             argv = argv + ' -m'
@@ -361,6 +446,7 @@ def user_entry():
         if covary:
             print("Co-varying option selected.")
             argv = argv + ' -cv'
+            check_variables_covary(varbs)
 
         if not hist:
             hist = 'fd'
@@ -372,6 +458,10 @@ def user_entry():
         if func:
             print("User function given: " + str(func[0]) + ", " + str(func[1]))
             argv = argv + ' -u ' + func[0] + ' ' + func[1]
+
+        if calc_areas:
+            print("Calculate areas option selected.")
+            argv = argv + ' -ca'
 
         if lon_centre:
             lon_centre = lon_centre[0]
@@ -387,13 +477,16 @@ def user_entry():
         # Extract data from files
         saved, ens_files, abs_files, full_saved = extract_data(algae_type, varbs, start, end, ens,
                                                 monthly=monthly, lat=lat, lon=lon, grid=grid, lon_centre=lon_centre,
-                                                               maskfile=mask)
+                                                               maskfile=mask, calc_areas=calc_areas, total=total)
 
         # Put all values in dictionary
         args_dict['algae_type'] = algae_type
         args_dict['varbs'] = varbs
         args_dict['start'] = start
         args_dict['end'] = end
+        args_dict['analysis'] = analysis
+        args_dict['total'] = total
+        args_dict['cov'] = covary
         args_dict['ens'] = ens
         args_dict['monthly'] = monthly
         args_dict['lat'] = lat
@@ -425,7 +518,7 @@ def user_entry():
         file_name, func_name = func[0], func[1]
         user_ens_stats = compute_user_analysis(saved, file_name, func_name)
     else:
-        ens_stats, analysis_str = compute_stats_analysis(saved, analysis='mean')
+        ens_stats, analysis_str = compute_stats_analysis(saved, args_dict['analysis'])
 
     # PLOTTING
     plot = args_dict['plot']
@@ -437,7 +530,7 @@ def user_entry():
             plot_map(ens_stats, args_dict['varbs'], save_out=args_dict['save_out'], ens_num=plot_ens_num, analysis_str=analysis_str)
 
         # Plot histogram
-        create_histogram(saved, args_dict['start'], args_dict['end'], args_dict['varbs'], sel=args_dict['hist'], save_out=args_dict['save_out'], ens_num=plot_ens_num)
+        create_histogram(saved, args_dict['start'], args_dict['end'], args_dict['varbs'], sel=args_dict['hist'], save_out=args_dict['save_out'], ens_num=plot_ens_num, cov=args_dict['cov'])
         # Plot time series and boxplot
         if func is not None:
             create_timeseries(user_ens_stats, args_dict['start'], args_dict['end'], args_dict['varbs'], save_out=args_dict['save_out'], ens_num=plot_ens_num, func_name=func_name)
@@ -445,11 +538,12 @@ def user_entry():
             create_timeseries(saved, args_dict['start'], args_dict['end'], args_dict['varbs'], save_out=args_dict['save_out'], ens_num=plot_ens_num, func_name=func_name)
 
     # WRITE ANALYSIS TO NETCDF FILE
-    if func:
-        write_user_analysis_to_netcdf_file(ens_files, abs_files, user_ens_stats, func_name, args_dict['varbs'], args_dict['start'], args_dict['end'], args_dict['argv'], test=True)
-    else:
-        write_means_to_netcdf_file(ens_files, abs_files, ens_stats, analysis_str, args_dict['varbs'], args_dict['start'], args_dict['end'], args_dict['argv'], test=True)
+    # if func:
+    #     write_user_analysis_to_netcdf_file(ens_files, abs_files, user_ens_stats, func_name, args_dict['varbs'], args_dict['start'], args_dict['end'], args_dict['argv'], test=True)
+    # else:
+    #     write_means_to_netcdf_file(ens_files, abs_files, ens_stats, analysis_str, args_dict['varbs'], args_dict['start'], args_dict['end'], args_dict['argv'], test=True)
 
+    print("Program Successful - Terminal Finished.")
     # End logging
     sys.stdout = old_stdout
     log_file.close()
