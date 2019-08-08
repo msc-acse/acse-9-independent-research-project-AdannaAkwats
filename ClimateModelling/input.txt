@@ -109,12 +109,10 @@ Calculate areas: True
 #    If set True, all the ensembles will be averaged as a collection.
 #    If set False, the ensembles will be averaged individually.
 # ------
-# Plot: Ensemble number, Date : Plot map, histogram and timeseries graphs
-#    E.g. --plot 1 2005-03-25
-#    Format of date : YYYY-MM-DD
-#    - map : needs ensemble number and date to plot
-#    - histogram : needs ensemble number to plot
-#    - timeseries : needs ensemble number to plot
+# Plot: Ensemble number : Plot map, histogram and timeseries graphs given specific ensemble to plot
+#   E.g. --plot 1
+#   The ensemble number must be > 0.
+#   Note: If 'Total ensemble stats' is set, when plotting map, averages across all ensembles are plotted.
 # ------
 # Monthly: Set to True if data in file is stored in monthly increments,
 #          otherwise daily increments is assumed.
@@ -128,7 +126,7 @@ Calculate areas: True
 #        Cannot be used in conjunction with grid point.
 # ------
 # Mask file: Uses masking grid given as a file. Contains description of
-#             multiple polygons.
+#             multiple polygons. An example file is given in mask_example.txt
 # ------
 # Save output: True/False: Save data output of histogram and timeseries
 # ------

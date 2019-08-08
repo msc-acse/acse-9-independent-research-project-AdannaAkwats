@@ -44,7 +44,7 @@ def check_analysis(a):
     all_elements_contained = all(elem in ans for elem in a)
 
     if not all_elements_contained:
-        print("Error in function check_analysis: Analysis given cannot be selected. "
+        print("ERROR in function check_analysis: Analysis given cannot be selected. "
               "Ensure that analysis is one or more of [mean, std, rms, median].")
         sys.exit()
     return True
@@ -57,7 +57,7 @@ def check_variables_covary(varbs):
     :return: boolean or throws error
     """
     if len(varbs) != 2:  # If not 2 variables, then cannot perform covariance
-        print("Error in function check_variables_covary: Selecting covariance required two variables.")
+        print("ERROR in function check_variables_covary: Selecting covariance required two variables.")
         sys.exit()
     return True
 
@@ -74,7 +74,7 @@ def get_date(date_entry, start=True):
         date_ = map(int, date_entry.split('-'))
         date_list = list(date_)
     except ValueError:
-        print("Error in function get_date(): Date written in unrecognisable format. Please try again.")
+        print("ERROR in function get_date(): Date written in unrecognisable format. Please try again.")
         return None
 
     len_d = len(date_list)
@@ -95,13 +95,13 @@ def get_date(date_entry, start=True):
         day = date_list[2]
         month = date_list[1]
     else:
-        print("Error in function get_date(): too many split arguments")
+        print("ERROR in function get_date(): too many split arguments")
 
     # check that these are valid dates
     try:
         datetime(year, month, day)
     except ValueError:
-        print("Error in function get_date(): invalid date")
+        print("ERROR in function get_date(): invalid date")
         return None
 
     return day, month, year
@@ -126,7 +126,7 @@ def file_entry(example=False):
     # Check if any required arguments are not filled in
     for i in range(4):
         if len(args[i]) == 0:
-            print("Error: the input file has missing required arguments.")
+            print("ERROR: the input file has missing required arguments.")
             sys.exit()
 
     # Check if any optional arguments are not filled in
@@ -178,7 +178,7 @@ def file_entry(example=False):
             grid[0] = float(grid[0].strip())
             grid[1] = float(grid[1].strip())
         except Exception:
-            print("Error in function file_entry: Argument may be missing a comma.")
+            print("ERROR in function file_entry: Grid argument in input file may be missing a comma.")
             sys.exit()
     elif sample:
         sample = sample.split(',')
@@ -186,7 +186,7 @@ def file_entry(example=False):
             sample[0] = float(sample[0].strip())
             sample[1] = float(sample[1].strip())
         except Exception:
-            print("Error in function file_entry: Argument may be missing a comma.")
+            print("ERROR in function file_entry: Sample argument in input file may be missing a comma.")
             sys.exit()
 
     # Histogram option
@@ -198,7 +198,7 @@ def file_entry(example=False):
         try:
             lb = [float(lb.strip())]
         except Exception:
-            print("Error in function file_entry: Longitude centre may not be a float.")
+            print("ERROR in function file_entry: Longitude centre may not be a float.")
             sys.exit()
 
     # Get variables and put in list
@@ -213,7 +213,7 @@ def file_entry(example=False):
             func[0] = func[0].strip()
             func[1] = func[1].strip()
         except Exception:
-            print("Error in function file_entry: Argument may be missing a comma.")
+            print("ERROR in function file_entry: User function in argument in input file may be missing a comma.")
             sys.exit()
 
     return algae_type, start, varbs, ens, end, analysis, total, plot, monthly, grid, sample, mask, output, covary, hist, lb, save_ext, func, calc_areas
@@ -331,7 +331,7 @@ def user_entry():
     analysis, calc_areas, total = None, None, None
     argv = None
     loaded_data = None
-    saved, ens_files, abs_files, full_saved = None, None, None, None
+    saved, ens_files, abs_files, full_saved, dim_renames = None, None, None, None, None
     args_dict = {}
 
     # If no arguments are given, use input file
@@ -343,7 +343,7 @@ def user_entry():
         loaded_data = sys.argv[1]
         # Check that it is a pickle file
         if loaded_data is None or loaded_data[-3:] != 'pkl':
-            print("Error in function user_entry : Pickle file must be used.")
+            print("ERROR in function user_entry : Pickle file must be used.")
             sys.exit()
     else:
         # Arguments
@@ -403,7 +403,7 @@ def user_entry():
         # Check that dates are in valid order
         is_valid = check_valid_order([day_s, mon_s, yr_s], [day_e, mon_e, yr_e])
         if not is_valid:
-            print("Error: Invalid start and end date")
+            print("ERROR: Invalid start and end date")
             print("  - The end date is earlier than the start date")
             sys.exit()
         print("Number of ensembles:", ens)
@@ -440,6 +440,8 @@ def user_entry():
                 mask = mask[0]
             print("Masking grid option selected.")
             argv = argv + ' -mk ' + mask
+        elif not mask:
+            mask = None
         if output:
             print("Save analysis data output selected.")
             argv = argv + ' -o'
@@ -477,8 +479,7 @@ def user_entry():
         # Extract data from files
         saved, ens_files, abs_files, full_saved = extract_data(algae_type, varbs, start, end, ens,
                                                 monthly=monthly, lat=lat, lon=lon, grid=grid, lon_centre=lon_centre,
-                                                               maskfile=mask, calc_areas=calc_areas, total=total)
-
+                                                               maskfile=mask, calc_areas=calc_areas)
         # Put all values in dictionary
         args_dict['algae_type'] = algae_type
         args_dict['varbs'] = varbs
@@ -518,7 +519,11 @@ def user_entry():
         file_name, func_name = func[0], func[1]
         user_ens_stats = compute_user_analysis(saved, file_name, func_name)
     else:
-        ens_stats, analysis_str = compute_stats_analysis(saved, args_dict['analysis'])
+        ens_stats, analysis_str = compute_stats_analysis(saved, args_dict['analysis'], total=args_dict['total'])
+
+    # Warning for mask and sample/grid
+    if args_dict['mask'] is not None and args_dict['lat'] is not None:
+        print("WARNING: Please ensure that sample/grid point is in the masked region.")
 
     # PLOTTING
     plot = args_dict['plot']
@@ -527,23 +532,31 @@ def user_entry():
 
         # Only plot map of analysis if using analysis: mean, median, std or rms and NOT grid/sample point
         if args_dict['lat'] is None:
-            plot_map(ens_stats, args_dict['varbs'], save_out=args_dict['save_out'], ens_num=plot_ens_num, analysis_str=analysis_str)
+            plot_map(ens_stats, args_dict['varbs'], save_out=args_dict['save_out'], ens_num=plot_ens_num,
+                     analysis_str=analysis_str, total=args_dict['total'])
 
         # Plot histogram
-        create_histogram(saved, args_dict['start'], args_dict['end'], args_dict['varbs'], sel=args_dict['hist'], save_out=args_dict['save_out'], ens_num=plot_ens_num, cov=args_dict['cov'])
+        create_histogram(saved, args_dict['start'], args_dict['end'], args_dict['varbs'], sel=args_dict['hist'],
+                         save_out=args_dict['save_out'], ens_num=plot_ens_num, cov=args_dict['cov'], mask=args_dict['mask'])
         # Plot time series and boxplot
         if func is not None:
-            create_timeseries(user_ens_stats, args_dict['start'], args_dict['end'], args_dict['varbs'], save_out=args_dict['save_out'], ens_num=plot_ens_num, func_name=func_name)
+            create_timeseries(user_ens_stats, args_dict['start'], args_dict['end'], args_dict['varbs'],
+                              save_out=args_dict['save_out'], ens_num=plot_ens_num, func_name=func_name)
         else:
-            create_timeseries(saved, args_dict['start'], args_dict['end'], args_dict['varbs'], save_out=args_dict['save_out'], ens_num=plot_ens_num, func_name=func_name)
+            create_timeseries(saved, args_dict['start'], args_dict['end'], args_dict['varbs'],
+                              save_out=args_dict['save_out'], ens_num=plot_ens_num, func_name=func_name)
 
     # WRITE ANALYSIS TO NETCDF FILE
-    # if func:
-    #     write_user_analysis_to_netcdf_file(ens_files, abs_files, user_ens_stats, func_name, args_dict['varbs'], args_dict['start'], args_dict['end'], args_dict['argv'], test=True)
-    # else:
-    #     write_means_to_netcdf_file(ens_files, abs_files, ens_stats, analysis_str, args_dict['varbs'], args_dict['start'], args_dict['end'], args_dict['argv'], test=True)
+    if func:
+        write_user_analysis_to_netcdf_file(ens_files, abs_files, user_ens_stats, func_name, args_dict['varbs'], args_dict['start'], args_dict['end'], args_dict['argv'], test=True)
+    else:
+        write_means_to_netcdf_file(ens_files, abs_files, ens_stats, analysis_str, args_dict['varbs'],
+                                   args_dict['start'], args_dict['end'], args_dict['argv'], saved, full_saved,
+                                   total=args_dict['total'], lon_centre=args_dict['lon_centre'],
+                                    mask=args_dict['mask'], lon=args_dict['lon'], lat=args_dict['lat'],
+                                    grid=args_dict['grid'], test=True)
 
-    print("Program Successful - Terminal Finished.")
+    print("PROGRAM SUCCESSFUL - TERMINAL FINISHED.")
     # End logging
     sys.stdout = old_stdout
     log_file.close()

@@ -109,10 +109,10 @@ Calculate areas: True
 #    If set True, all the ensembles will be averaged as a collection.
 #    If set False, the ensembles will be averaged individually.
 # ------
-# Plot: Ensemble number : Plot map, histogram and timeseries graphs given
-#    specific ensemble to plot
-#    E.g. --plot 1
-#    The ensemble number must be > 0.
+# Plot: Ensemble number : Plot map, histogram and timeseries graphs given specific ensemble to plot
+#   E.g. --plot 1
+#   The ensemble number must be > 0.
+#   Note: If 'Total ensemble stats' is set, when plotting map, averages across all ensembles are plotted.
 # ------
 # Monthly: Set to True if data in file is stored in monthly increments,
 #          otherwise daily increments is assumed.
@@ -126,7 +126,7 @@ Calculate areas: True
 #        Cannot be used in conjunction with grid point.
 # ------
 # Mask file: Uses masking grid given as a file. Contains description of
-#             multiple polygons.
+#             multiple polygons. An example file is given in mask_example.txt
 # ------
 # Save output: True/False: Save data output of histogram and timeseries
 # ------
@@ -149,6 +149,9 @@ Calculate areas: True
 #    sqrt    - Square root (of data size) estimator
 # For more detailed explanations, go to:
 # https://docs.scipy.org/doc/numpy/reference/generated/numpy.histogram_bin_edges.html#numpy.histogram_bin_edges
+#
+#  If you want to specify the bin edges used in the histogram, you can input the file - an example file is given in
+#  histogram_bins.txt
 # ------
 # Longitude centre: Centre
 #        Longitude to centre map on.

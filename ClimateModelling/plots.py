@@ -9,7 +9,8 @@ from pandas.plotting import register_matplotlib_converters
 import sys
 
 
-def create_histogram(list_ens, start_date, end_date, variables, monthly=False, save_out=True, sel='fd', ens_num=1, cov=False):
+def create_histogram(list_ens, start_date, end_date, variables, monthly=False, save_out=True, sel='fd', ens_num=1,
+                     cov=False, mask=None):
     """
     Plot or save histogram data of cube
     :param list_ens: list of ensemble data
@@ -20,6 +21,8 @@ def create_histogram(list_ens, start_date, end_date, variables, monthly=False, s
     :param save_out: if set, then save histogram frequency and values in text file
     :param sel: type of bin selection for 1D histogram
     :param ens_num: selection of ensemble to use
+    :param cov: if covariance between 2 values, then param is set to true
+    :param mask: set to true if masked data given
     """
 
     # Make sure data structures are not empty
@@ -40,7 +43,7 @@ def create_histogram(list_ens, start_date, end_date, variables, monthly=False, s
     if not isinstance(variables, list):
         variables = [variables]
     elif len(variables) > 2:
-        print("Error: function create_histogram: cannot construct histogram with more than 2-dimensions.")
+        print("ERROR: function create_histogram: cannot construct histogram with more than 2-dimensions.")
         sys.exit()
 
     # Get flattened data (without nan values) from cubes
@@ -51,7 +54,12 @@ def create_histogram(list_ens, start_date, end_date, variables, monthly=False, s
         cube = list_ens[ens_num][var]
         full_data = cube.data.flatten()
         # Get indices of where value is nan
-        indices = np.argwhere(np.isnan(full_data.data))
+        indices = []
+        if mask is None or not mask:
+            indices = np.argwhere(np.isnan(full_data.data))
+        else:
+            x = cube.data.filled()
+            indices = np.argwhere(np.isclose(x.flatten().data, cube.data.fill_value))
         # Remove nan values from full data
         full_data = np.delete(full_data, indices)
         cubes.append(cube)
@@ -179,13 +187,13 @@ def create_timeseries(list_ens, start_date, end_date, variables,  monthly=False,
         try:
             pd_data = as_series(cube)
         except Exception:
-            print("Error: function create_timeseries: cannot construct timeseries with more than 1-dimension cube.")
+            print("WARNING: function create_timeseries: cannot construct timeseries with more than 1-dimension cube.")
             return None
 
         # Get x values in series
         indices = pd_data.index
         if len(indices) == 1:
-            print("Warning in function create_timeseries: cannot construct timeseries of one value.")
+            print("WARNING in function create_timeseries: cannot construct timeseries of one value.")
             return None
         # Save dates that are in datetime format
         new_indices = []
@@ -244,20 +252,22 @@ def create_timeseries(list_ens, start_date, end_date, variables,  monthly=False,
         # axs[2].set_ylabel(cube.name())
 
 
-def plot_map(list_ens, variables, analysis_str=None, ens_num=1, save_out=False, lat=None, lon=None, func_name=None):
+def plot_map(list_ens, variables, analysis_str=None, ens_num=1, save_out=False, lat=None, lon=None, total=False):
     """
     Plot (and save) maps given date and variable in cube
     :param list_ens: the list of ensembles (dicts) containing the data of the climate variables
     :param variables: variables to select in cube
+    :param analysis_str: list of analysis names performed on ensemble, list of strings
     :param ens_num: gives which ensemble to plot, default = 1
     :param save_out: if set, then saves to png file
     :param lat: latitude, float, if given, mark on graph
     :param lon: longitude, float, if given, mark on graph
+    :param total: set if all ensembles have been calculated together, instead of separately, boolean
     """
     # Make sure data structures are not empty
     assert list_ens is not None
     assert variables is not None
-    assert analysis_str is not None or func_name is not None
+    assert analysis_str is not None
 
     # If variables is just one object, cast to list
     if not isinstance(variables, list):
@@ -268,12 +278,20 @@ def plot_map(list_ens, variables, analysis_str=None, ens_num=1, save_out=False, 
             # Extract time in cube
             cube = None
             if len(analysis_str) > 1:
-                cube = list_ens[ens_num][a][variable]
+                if total:
+                    cube = list_ens[a][variable]
+                else:
+                    cube = list_ens[ens_num][a][variable]
             else:
-                cube = list_ens[ens_num][variable]
+                if total:
+                    cube = list_ens[variable]
+                else:
+                    cube = list_ens[ens_num][variable]
 
             # Plot title name
             title_name = analysis_str[a] + " of " + cube.name() + " of ensemble " + str(ens_num) + " with variable " + str(variable)
+            if total:
+                title_name = analysis_str[a] + " of " + cube.name() + " of all ensembles" + " with variable " + str(variable)
 
             # Plot the graph
             fig, ax = plt.subplots(figsize=(11, 4))
@@ -288,7 +306,7 @@ def plot_map(list_ens, variables, analysis_str=None, ens_num=1, save_out=False, 
             try:
                 cf = ax.contourf(lons.points, lats.points, masked_array, cmap=brewer_cmap)
             except Exception:
-                print("Error in function plot_map: cube is not 2D.")
+                print("ERROR in function plot_map: cube is not 2D.")
                 return None
             # cube.intersection(longitude=(-45, 45))  # get specific range
             fig.colorbar(cf, ax=ax, label=cube.units)
