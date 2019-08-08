@@ -54,7 +54,7 @@ def ens_to_indx(ens_num, max_start=1000000):
         # Otherwise, try with bigger number of ensembles
         start *= 10
 
-    print("Error: ens_to_index function: ensemble number cannot be converted to index")
+    print("ERROR: ens_to_index function: ensemble number cannot be converted to index")
 
 
 def get_diff_start_end(start_date, end_date, min_yr=None, monthly=False):
@@ -159,7 +159,7 @@ def get_files_time_period(prefix, yr_s, yr_e):
 
     # Check if files are empty
     if len(files) == 0:
-        print("Error in function get_files_time_period: No NetCDF data files given within selected time period.")
+        print("ERROR in function get_files_time_period: No NetCDF data files given within selected time period.")
         sys.exit()
 
     return files, min_yr, max_yr
@@ -191,7 +191,7 @@ def get_polygons(mask_file):
                     try:
                         level = curline.split(':')[1].strip()
                     except Exception:
-                        print("Error in function get_polygons: Argument may be missing a semi-colon.")
+                        print("ERROR in function get_polygons: Argument may be missing a semi-colon.")
                         print(
                             "Please see mask_example.out for an example of what kind of string is expected to construct "
                             "polygons.")
@@ -202,20 +202,20 @@ def get_polygons(mask_file):
                             level[0] = int(level[0].strip())
                             level[1] = int(level[1].strip())
                         except Exception:
-                            print("Error in function get_polygons: Level number is not recognised as an integer.")
+                            print("ERROR in function get_polygons: Level number is not recognised as an integer.")
                             sys.exit()
                     else:
                         try:
                             level = int(level)
                         except Exception:
-                            print("Error in function get_polygons: Level number is not recognised as an integer.")
+                            print("ERROR in function get_polygons: Level number is not recognised as an integer.")
                             sys.exit()
                 # convert string to nested list of tuples
                 else:
                     try:
                         converted = ast.literal_eval(curline)
                     except Exception:
-                        print("Error in function get_polygons: List not constructed properly in mask file.")
+                        print("ERROR in function get_polygons: List not constructed properly in mask file.")
                         print("Please see mask_example.out for an example of what kind of string is expected to construct "
                               "polygons.")
                         sys.exit()
@@ -360,7 +360,7 @@ def get_bins_from_file(hist_file, variables):
                     vars_in_file = [v.strip() for v in vars_in_file]
                     # Check that variables in file match what has already been given
                     if not set(variables) == set(vars_in_file):
-                        print("Error in function get_bins_from_file: Variable given in file is not recognised or "
+                        print("ERROR in function get_bins_from_file: Variable given in file is not recognised or "
                               "not all variables are given.")
                         print("  Please make sure that all variables given in input" + str(variables) + " are included in")
                         sys.exit()
@@ -369,21 +369,21 @@ def get_bins_from_file(hist_file, variables):
                 else:  # Get bins
                     bins = curline.split(',')
                     if len(bins) != len(vars_in_file):
-                        print("Error in function get_bins_from_file: Number of variables does not match columns of bins.")
+                        print("ERROR in function get_bins_from_file: Number of variables does not match columns of bins.")
                         print(" Number of variables: " + str(len(vars_in_file)) + ", number of bin columns: " + str(len(bins)) + ".")
                         sys.exit()
                     if len(bins) == 1:
                         try:
                             bins = [float(bins[0].strip())]
                         except Exception:
-                            print("Error in function get_bins_from_file: Bin number " + bins[0] +
+                            print("ERROR in function get_bins_from_file: Bin number " + bins[0] +
                                   " is not recognised as a float.")
                             sys.exit()
                     else:  # More than one bin given
                         try:
                             bins = [float(b.strip()) for b in bins]
                         except Exception:
-                            print("Error in function get_bins_from_file: Bin number " + str(bins) +
+                            print("ERROR in function get_bins_from_file: Bin number " + str(bins) +
                                   " is not recognised as a float.")
                             sys.exit()
 

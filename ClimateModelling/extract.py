@@ -145,7 +145,7 @@ def calculate_areas(cube, lat_name, lon_name):
 
 
 def extract_data(algae_type, variables, start_date, end_date, num_ens, monthly=False, lat=None, lon=None,
-                 grid=None, lon_centre=None, maskfile=None, calc_areas=False, total=False, test=True):
+                 grid=None, lon_centre=None, maskfile=None, calc_areas=False, test=True):
     """
     Extracts the data given by the user and stores them
     :param algae_type: name of prefix of filename to look into
@@ -160,7 +160,6 @@ def extract_data(algae_type, variables, start_date, end_date, num_ens, monthly=F
     :param lon_centre: longitude center , float
     :param maskfile: file that contains mask data, string
     :param calc_areas: set if areas of grid boxes should be calculated, boolean
-    :param total: if total set, then extract data with combined ensembles (instead of separated into ensembles), boolean
     :return: dictionary storing arrays or list of arrays:
             e.g. if only one file inputted and variables = ['temp', 'sal'], then
                 dict = {'temp': [...], 'sal': [...]
@@ -175,14 +174,13 @@ def extract_data(algae_type, variables, start_date, end_date, num_ens, monthly=F
     assert variables is not None
     assert check_list_date(start_date) and check_list_date(end_date)
 
-    # Check for mask
-    if not maskfile:
-        maskfile = None
-
     # Check if sample point
     sample = False
     if lat and lon and not grid:
         sample = True
+
+    # Only once
+    dr = False
 
     # Get day, month and year
     day_s, mon_s, yr_s = start_date[0], start_date[1], start_date[2]
@@ -225,6 +223,11 @@ def extract_data(algae_type, variables, start_date, end_date, num_ens, monthly=F
     time_name, lat_name, lon_name = None, None, None
     # Set if data is 4D
     depth_name = None
+    # Change name of latitude and longitude to regular names
+    const_lon_name, const_lat_name, const_time_name = "longitude", "latitude", "time"
+    # If mask set, then compute mask array
+    # Used to compute mask array and longitude centre only once
+    mask_set, mask_arr, level = False, None, None
 
     # Transform the lon lat point into rotated coordinates
     target_xy = None
@@ -237,13 +240,10 @@ def extract_data(algae_type, variables, start_date, end_date, num_ens, monthly=F
     for i in range(num_ens):
         datasets = xr.open_mfdataset(ens_files[i])
 
-        # If mask set, then compute mask array
-        mask_set, mask_arr, level = False, None, None  # Used to compute mask array only once
-
         for var in variables:
             # Check if variable is in the dataset
             if var not in datasets:  # throw an error and stop
-                print("Error in function extract_file : Variable %s not found in files" % var)
+                print("ERROR in function extract_file : Variable %s not found in files" % var)
                 sys.exit()
 
             # Select time period in dataset
@@ -251,24 +251,25 @@ def extract_data(algae_type, variables, start_date, end_date, num_ens, monthly=F
             # Convert to cube
             cube = time_selected.to_iris()
 
-            # Get names of longitude and latitude variables
-            # Get list of coordinate names
-            coord_names = [coord.name() for coord in cube.coords()]
-            # Get names of coordinates
-            for dd in list(coord_names):
-                if dd == 't' or dd == 'time':
-                    time_name = dd
-                elif dd[0].lower() == 'y' or 'lat' in dd.lower() or 'latitude' in dd.lower():
-                    lat_name = dd
-                elif dd[0].lower() == 'x' or 'lon' in dd.lower() or 'longitude' in dd.lower():
-                    lon_name = dd
-                # Check if 3D data
-                else:
-                    if not (dd == 'bounds' or dd == 'bnds'):
-                        depth_name = dd
+            if not dr:
+                # Get names of longitude and latitude variables
+                # Get list of coordinate names
+                coord_names = [coord.name() for coord in cube.coords()]
+                # Get names of coordinates
+                for dd in list(coord_names):
+                    if dd.lower() == 't' or 'time' in dd.lower():
+                        time_name = dd
+                    elif dd[0].lower() == 'y' or 'lat' in dd.lower() or 'latitude' in dd.lower():
+                        lat_name = dd
+                    elif dd[0].lower() == 'x' or 'lon' in dd.lower() or 'longitude' in dd.lower():
+                        lon_name = dd
+                    # Check if 3D data
+                    else:
+                        if not (dd == 'bounds' or dd == 'bnds'):
+                            depth_name = dd
+                dr = True
 
-            # Change name of latitude and longitude to regular names
-            const_lon_name, const_lat_name, const_time_name = "longitude", "latitude", "time"
+            # Rename coords
             coord = cube.coord(lon_name)
             coord.rename(const_lon_name)
             coord = cube.coord(lat_name)
@@ -276,16 +277,13 @@ def extract_data(algae_type, variables, start_date, end_date, num_ens, monthly=F
             coord = cube.coord(time_name)
             coord.rename(const_time_name)
 
-            # Update lon and lat name
-            lon_name, lat_name = const_lon_name, const_lat_name
-
             # Calculate areas
             if calc_areas:
-                calculate_areas(cube, lat_name, lon_name)
+                calculate_areas(cube, const_lat_name, const_lon_name)
                 calc_areas = False
 
             # Get longitude and latitude
-            lons, lats = cube.coord(lon_name).points, cube.coord(lat_name).points
+            lons, lats = cube.coord(const_lon_name).points, cube.coord(const_lat_name).points
 
             # Centre to new longitude centre
             if lon_centre is not None:
@@ -301,14 +299,14 @@ def extract_data(algae_type, variables, start_date, end_date, num_ens, monthly=F
                 coords = cube.dim_coords
                 axis = 0
                 for j in coords:
-                    if j.name() == lon_name:
+                    if j.name() == const_lon_name:
                         break
                     axis += 1
 
                 # Move map centre and replace data
                 shifted_cube = np.roll(cube.data, count, axis=axis)
                 cube.data = shifted_cube
-                dim_coord = cube.coord(lon_name)
+                dim_coord = cube.coord(const_lon_name)
                 centred_coord = iris.coords.DimCoord(lons, standard_name=dim_coord.standard_name,
                                                      units=dim_coord.units,
                                                      long_name=dim_coord.long_name, var_name=dim_coord.var_name,
@@ -341,11 +339,11 @@ def extract_data(algae_type, variables, start_date, end_date, num_ens, monthly=F
 
                 # Check lat and lon are in grid
                 if not (min(lons) <= lon <= max(lons)) or not (min(lats) <= lat <= max(lats)):
-                    print("Error: extract_data function: latitude and longitude are outside grid.")
+                    print("ERROR: extract_data function: latitude and longitude are outside grid.")
                     sys.exit()
 
                 # Construct lat and lon to give to iris cube interpolate function
-                samples = [(lat_name, target_xy[1]), (lon_name, target_xy[0])]
+                samples = [(const_lat_name, target_xy[1]), (const_lon_name, target_xy[0])]
                 if grid:
                     # Uses nearest neighbour interpolation and takes into account spherical distance
                     if reduced_cube is None:
