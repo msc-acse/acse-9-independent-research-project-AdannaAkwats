@@ -1,0 +1,24 @@
+Arguments:
+- algae type:  dic_deltap
+- variables:  ['dic_deltap']
+- start date: 1953-1-1
+- end date: 1954-12-31
+Number of ensembles: 2
+Analysis:  ['mean', 'rms']
+Plotting option selected.
+Masking grid option selected.
+Save analysis data output selected.
+Histogram bin selection option: histogram_bins.txt
+Calculate areas option selected.
+Longitude centering option selected.
+function extract_data: Data successfully extracted from files.
+function save_extract_data_from_file: Extracted data successfully saved to extracted_data.pkl.
+function compute_stats_analysis: Averages of data successfully computed.
+Map is saved in the results folder as a png file.
+Map is saved in the results folder as a png file.
+Histogram data is saved in the results folder as a txt file.
+WARNING: function create_timeseries: cannot construct timeseries with more than 1-dimension cube.
+([0, 1], [['data\\dic_deltap_ens101_1d_1953.nc', 'data\\dic_deltap_ens101_1d_1954.nc'], ['data\\dic_deltap_ens102_1d_1953.nc', 'data\\dic_deltap_ens102_1d_1954.nc']])
+[(0, ['data\\dic_deltap_ens101_1d_1953.nc', 'data\\dic_deltap_ens101_1d_1954.nc']), (1, ['data\\dic_deltap_ens102_1d_1953.nc', 'data\\dic_deltap_ens102_1d_1954.nc'])]
+Ensemble files created in results\ensemble_averages folder.
+PROGRAM SUCCESSFUL - TERMINAL FINISHED.

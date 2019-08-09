@@ -35,27 +35,27 @@
 #
 # REQUIRED ARGUMENTS
 # ------------------------------------------------------------------------------
-Prefix: dic_deltap
-Start date of analysis: 1953
-Variables: dic_deltap
-Number of ensembles: 2
+Prefix:
+Start date of analysis:
+Variables:
+Number of ensembles: 1
 #
 # ------------------------------------------------------------------------------
 # OPTIONAL ARGUMENTS
 # ------------------------------------------------------------------------------
-End date of analysis: 1954
-Analysis: mean, rms
-Total ensemble stats: False
-Plot: 1
+End date of analysis:
+Analysis: mean
+Total ensemble stats: True
+Plot:
 Monthly: False
 Grid:
 Sample:
-Mask file: mask_example.txt
-Save Output: True
+Mask file:
+Save Output: False
 Covary: False
 Histogram bin selection: histogram_bins.txt
-Longitude centre: 100
-Save extract data: True
+Longitude centre:
+Save extract data: False
 User function:
 Calculate areas: True
 #
@@ -163,10 +163,8 @@ Calculate areas: True
 #              file_name : name of file that contains function in user_function folder
 #              function_name : name of function to call
 #       Note: user functions are expected to only take in a cube as an argument. An example of a function
-#             can be found in user_function/example_function.py
 # ------
 # Calculate areas: True/False: Calculate areas of grid boxes of latitude and longitude and saves to
 #       NetCDF file areas.nc in results folder.
 #
 #
-
