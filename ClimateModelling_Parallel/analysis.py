@@ -3,6 +3,53 @@ from cdo import Cdo
 import importlib
 import directories
 import numpy as np
+from multiprocessing import Pool
+from functools import partial
+import parallel_settings
+
+
+def compute_stats_parallel(total, time_name, indices_filled, analysis, ens):
+
+    nan_indices, variables = None, []
+    # Used only if we analyse all at the same time
+    mean_calcs, std_calcs, median_calcs, rms_calcs = {}, {}, {}, {}
+    # Calculate the mean of each variable in the dictionary given
+    for d in ens:
+        variables.append(d)
+        for a in analysis:
+            if a == 'mean':
+                mean_calc = ens[d].collapsed(time_name, iris.analysis.MEAN)
+                if total:
+                    if not indices_filled:
+                        for s in ens[d].slices_over('time'):
+                            if np.ma.is_masked(s.data):
+                                x = s.data.filled()
+                                nan_indices = np.argwhere(np.isclose(x.flatten().data, s.data.fill_value))
+                            else:
+                                nan_indices = np.argwhere(np.isnan(s.data.flatten().data))
+                            break
+                        indices_filled = True
+                mean_calcs[d] = mean_calc
+            if a == 'std':
+                std_calc = ens[d].collapsed(time_name, iris.analysis.STD_DEV)
+                std_calcs[d] = std_calc
+            if a == 'median':
+                median_calc = ens[d].collapsed(time_name, iris.analysis.MEDIAN)
+                median_calcs[d] = median_calc
+            if a == 'rms':
+                rms_calc = ens[d].collapsed(time_name, iris.analysis.RMS)
+                rms_calcs[d] = rms_calc
+    calcs = []
+    if 'mean' in analysis:
+        calcs.append(mean_calcs)
+    if 'std' in analysis:
+        calcs.append(std_calcs)
+    if 'median' in analysis:
+        calcs.append(median_calcs)
+    if 'rms' in analysis:
+        calcs.append(rms_calcs)
+
+    return calcs, nan_indices, variables
 
 
 def compute_stats_analysis(list_ens, analysis, total=False):
@@ -22,54 +69,24 @@ def compute_stats_analysis(list_ens, analysis, total=False):
 
     analysis = [a.lower() for a in analysis]
 
-    variables = []
-
-    nan_indices, indices_filled = None, False
+    indices_filled = False
 
     time_name = 'time'
-    # Holds the means for each ensemble
-    ens_calcs = []
-    for dict_ in list_ens:
-        # Save the mean of each variable in a dict of list
-        calcs = {}
-        # Used only if we analyse all at the same time
-        mean_calcs, std_calcs, median_calcs, rms_calcs = {}, {}, {}, {}
-        # Calculate the mean of each variable in the dictionary given
-        for d in dict_:
-            variables.append(d)
-            for a in analysis:
-                if a == 'mean':
-                    mean_calc = dict_[d].collapsed(time_name, iris.analysis.MEAN)
-                    if total:
-                        if not indices_filled:
-                            for s in dict_[d].slices_over('time'):
-                                if np.ma.is_masked(s.data):
-                                    x = s.data.filled()
-                                    nan_indices = np.argwhere(np.isclose(x.flatten().data, s.data.fill_value))
-                                else:
-                                    nan_indices = np.argwhere(np.isnan(s.data.flatten().data))
-                                break
-                            indices_filled = True
-                    mean_calcs[d] = mean_calc
-                if a == 'std':
-                    std_calc = dict_[d].collapsed(time_name, iris.analysis.STD_DEV)
-                    std_calcs[d] = std_calc
-                if a == 'median':
-                    median_calc = dict_[d].collapsed(time_name, iris.analysis.MEDIAN)
-                    median_calcs[d] = median_calc
-                if a == 'rms':
-                    rms_calc = dict_[d].collapsed(time_name, iris.analysis.RMS)
-                    rms_calcs[d] = rms_calc
-        calcs = []
-        if 'mean' in analysis:
-            calcs.append(mean_calcs)
-        if 'std' in analysis:
-            calcs.append(std_calcs)
-        if 'median' in analysis:
-            calcs.append(median_calcs)
-        if 'rms' in analysis:
-            calcs.append(rms_calcs)
-        ens_calcs.append(calcs)
+
+    pool = Pool(processes=parallel_settings.NUM_PROCESSORS)
+    # Go through variables in each ensemble
+
+    func = partial(compute_stats_parallel, total, time_name, indices_filled, analysis)
+
+    r = pool.map(func, list_ens)
+
+    pool.close()
+    pool.join()
+
+    # Get results from processes
+    ens_calcs = [tup[0] for tup in r]
+    nan_indices = [tup[1] for tup in r]
+    variables = r[0][2]
 
     # Find ensembles average
     if total:
