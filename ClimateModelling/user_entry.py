@@ -422,6 +422,8 @@ def user_entry():
         if plot:
             print("Plotting option selected.")
             argv = argv + ' -p ' + str(plot[0])
+        else:
+            plot = None
         if monthly:
             print("Monthly date expected.")
             argv = argv + ' -m'

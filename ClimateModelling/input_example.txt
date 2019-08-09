@@ -46,18 +46,18 @@ Number of ensembles: 2
 End date of analysis: 1954
 Analysis: mean, rms
 Total ensemble stats: False
-Plot: 1
+Plot:
 Monthly: False
 Grid:
-Sample:
-Mask file: mask_example.txt
+Sample: 14.5, -27.5
+Mask file:
 Save Output: True
 Covary: False
-Histogram bin selection: histogram_bins.txt
-Longitude centre: 100
-Save extract data: True
+Histogram bin selection: fd
+Longitude centre: 0
+Save extract data: False
 User function:
-Calculate areas: True
+Calculate areas: False
 #
 #
 # ------------------------------------------------------------------------------

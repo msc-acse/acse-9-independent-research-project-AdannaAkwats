@@ -236,6 +236,8 @@ def extract_data(algae_type, variables, start_date, end_date, num_ens, monthly=F
         rot_pole = pp_cs.as_cartopy_crs()
         target_xy = rot_pole.transform_point(lon, lat, ccrs.Geodetic())
 
+    print(num_ens)
+    print(ens_files)
     # Go through variables in each ensemble
     for i in range(num_ens):
         datasets = xr.open_mfdataset(ens_files[i])

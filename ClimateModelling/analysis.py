@@ -1,5 +1,4 @@
 import iris
-from cdo import Cdo
 import importlib
 import directories
 import numpy as np
@@ -114,6 +113,7 @@ def compute_stats_analysis(list_ens, analysis, total=False):
 
 def compute_enso_indices():
     # TODO
+    from cdo import Cdo
     cdo = Cdo()
     print(cdo.operators)
     return None
