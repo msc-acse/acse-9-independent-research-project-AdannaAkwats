@@ -135,7 +135,10 @@ def write_means_to_netcdf_file(ens_files, abs_files, ens_means, analysis_str, va
                 new_name = converted.name + '_' + analysis_str[a]
                 converted = converted.rename(new_name)
                 # Add new long name of file
-                new_long_name = converted.attrs['long_name'] + ' averaged between ' + start_end_str
+                try:
+                    new_long_name = converted.attrs['long_name'] + ' averaged between ' + start_end_str
+                except KeyError:
+                    new_long_name = var + ' averaged between ' + start_end_str
                 converted.attrs['long_name'] = new_long_name
                 # Append analysis to file
                 converted.to_netcdf(output_file, mode='a')

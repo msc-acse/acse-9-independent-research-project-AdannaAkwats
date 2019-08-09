@@ -6,4 +6,4 @@ import time
 if __name__ == "__main__":
     start = time.time()
     user_entry()
-    print("Time to run:", time.time() - start)
+    print("SUCCESS - Time to run:", time.time() - start)
