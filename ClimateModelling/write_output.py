@@ -1,4 +1,3 @@
-from nco import Nco
 import time
 from utils import *
 from netCDF4 import Dataset, MFDataset
@@ -388,6 +387,7 @@ def write_user_analysis_to_netcdf_file(ens_files, abs_files, user_analysis, func
     assert check_list_date(start_date) and check_list_date(end_date)
 
     # Initialise Nco
+    from nco import Nco
     nco = Nco()
 
     # Start and end date string

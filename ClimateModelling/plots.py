@@ -51,7 +51,7 @@ def create_histogram(list_ens, start_date, end_date, variables, monthly=False, s
     full_datum = []
     for var in variables:
         # Get cube from dictionary and flatten data
-        cube = list_ens[ens_num][var]
+        cube = list_ens[ens_num-1][var]
         full_data = cube.data.flatten()
         # Get indices of where value is nan
         indices = []
@@ -175,7 +175,7 @@ def create_timeseries(list_ens, start_date, end_date, variables,  monthly=False,
 
     for variable in variables:
         # Get cube from dictionary
-        cube = list_ens[ens_num][variable]
+        cube = list_ens[ens_num-1][variable]
         # Construct title name
         title_name = cube.name() + " measured " + time_str + " between " + str(start_date[2]) + "-" + str(start_date[1]) + "-" + \
                      str(start_date[0]) + " and " + str(end_date[2]) + "-" + str(end_date[1]) + "-" + str(end_date[0]) \
@@ -281,12 +281,12 @@ def plot_map(list_ens, variables, analysis_str=None, ens_num=1, save_out=False, 
                 if total:
                     cube = list_ens[a][variable]
                 else:
-                    cube = list_ens[ens_num][a][variable]
+                    cube = list_ens[ens_num-1][a][variable]
             else:
                 if total:
                     cube = list_ens[variable]
                 else:
-                    cube = list_ens[ens_num][variable]
+                    cube = list_ens[ens_num-1][variable]
 
             # Plot title name
             title_name = analysis_str[a] + " of " + cube.name() + " of ensemble " + str(ens_num) + " with variable " + str(variable)
