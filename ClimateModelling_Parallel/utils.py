@@ -39,22 +39,30 @@ def get_file_two_years(file):
         return int(match.group(1)), int(match.group(2))
 
 
-def ens_to_indx(ens_num, max_start=1000000):
+def ens_to_indx(ens_num, number_of_ensembles, max_start=1000000):
     """
     Get the index related to the ensemble number : e.g 101 => 0
     :param ens_num: ensemble number, int
+    :param number_of_ensembles, number of total ensembles used, int
     :param max_start: max number of ensembles, int
     :return: index, int
     """
     start = 100
+    res = -1
     while start < max_start:
         ind = ens_num % start
         if ind < start:
-            return ind - 1
+            res = ind - 1
+            break
         # Otherwise, try with bigger number of ensembles
         start *= 10
 
-    print("ERROR: ens_to_index function: ensemble number cannot be converted to index")
+    # Check if its within the number of ensembles given
+    if res == -1:
+        print("ERROR: ens_to_index function: ensemble number cannot be converted to index")
+    elif res + 1 > number_of_ensembles:
+        res = -1
+    return res
 
 
 def get_diff_start_end(start_date, end_date, min_yr=None, monthly=False):

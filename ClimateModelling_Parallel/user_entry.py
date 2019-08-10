@@ -422,6 +422,8 @@ def user_entry():
         if plot:
             print("Plotting option selected.")
             argv = argv + ' -p ' + str(plot[0])
+        else:
+            plot = None
         if monthly:
             print("Monthly date expected.")
             argv = argv + ' -m'
@@ -536,6 +538,8 @@ def user_entry():
             if func is None:
                 plot_map(ens_stats, args_dict['varbs'], save_out=args_dict['save_out'], ens_num=plot_ens_num,
                          analysis_str=analysis_str, total=args_dict['total'])
+            else:
+                print("WARNING: Map not plotted as user function is used.")
         # Plot histogram
         create_histogram(saved, args_dict['start'], args_dict['end'], args_dict['varbs'], sel=args_dict['hist'],
                          save_out=args_dict['save_out'], ens_num=plot_ens_num, cov=args_dict['cov'], mask=args_dict['mask'])

@@ -22,7 +22,7 @@ def write_parallel(abs_files, ens_means, analysis_str, variables, end_date, argv
         output_file = ens[0][:-3] + '_' + str(end_date[2]) + '.nc'
         output_file = os.path.basename(os.path.normpath(output_file))
     else:
-        print("ERROR in function write_means_to_netcdf_file: Non-NetCDF file discovered " + str(ens_files[i][0]))
+        print("ERROR in function write_means_to_netcdf_file: Non-NetCDF file discovered " + str(ens[0]))
         sys.exit()
     output_file = os.path.join(mean_folder, output_file)
 
@@ -202,8 +202,6 @@ def write_means_to_netcdf_file(ens_files, abs_files, ens_means, analysis_str, va
                                     grid, mean_folder, start_end_str)
 
         tup_ens = (list(range(len(ens_means))), ens_files)
-        print(tup_ens)
-        print(list(zip(list(range(len(ens_means))), ens_files)))
         pool.map(func, zip(list(range(len(ens_means))), ens_files))
         pool.close()
         pool.join()
