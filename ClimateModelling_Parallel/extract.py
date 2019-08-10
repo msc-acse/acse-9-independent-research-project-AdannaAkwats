@@ -201,9 +201,8 @@ def extract_parallel(variables, till_start, till_end, dr, const_lon_name, const_
         # Centre to new longitude centre
         if lon_centre is not None:
             # Move longitude centre
-            lon_range = len(lons)
-            lon_low = lon_centre - lon_range / 2
-            lon_high = lon_centre + lon_range / 2
+            lon_low = lon_centre - 180
+            lon_high = lon_centre + 180.1
             lons = iris.analysis.cartography.wrap_lons(lons, lon_low, lon_high - lon_low)
             count, _ = shift_by_index(lons, lon_centre)
             lons.sort()
