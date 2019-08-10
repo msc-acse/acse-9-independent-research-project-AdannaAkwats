@@ -1,6 +1,6 @@
 from user_entry import user_entry
 import time
-import pyximport; pyximport.install()
+# import pyximport; pyximport.install()
 
 
 if __name__ == "__main__":

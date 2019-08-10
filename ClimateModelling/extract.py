@@ -205,7 +205,9 @@ def extract_data(algae_type, variables, start_date, end_date, num_ens, monthly=F
     abs_files = [[] for _ in range(num_ens)]
 
     for i in range(len(files)):
-        ens_indx = ens_to_indx(get_ens_num(files[i]))
+        ens_indx = ens_to_indx(get_ens_num(files[i]), num_ens)
+        if ens_indx == -1:  # Ensemble number > Number of ensembles
+            continue
         # save in ens_files
         ens_files[ens_indx].append(files[i])
         # Get absolute path

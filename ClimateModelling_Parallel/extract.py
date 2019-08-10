@@ -170,7 +170,7 @@ def extract_parallel(variables, till_start, till_end, dr, const_lon_name, const_
             coord_names = [coord.name() for coord in cube.coords()]
             # Get names of coordinates
             for dd in list(coord_names):
-                if dd.lower() == 't' or 'time' in dd.lower():
+                if dd.lower() == 't' or dd.lower() == 'time':
                     time_name = dd
                 elif dd[0].lower() == 'y' or 'lat' in dd.lower() or 'latitude' in dd.lower():
                     lat_name = dd
@@ -274,7 +274,7 @@ def extract_parallel(variables, till_start, till_end, dr, const_lon_name, const_
                     found_grid = reduced_cube.interpolate(samples, iris.analysis.Linear())
 
             # TODO: what if variable = Nan ???
-            saved[i][var] = found_grid
+            saved[var] = found_grid
 
             # Save original cube
             if reduced_cube is None:
@@ -289,7 +289,6 @@ def extract_parallel(variables, till_start, till_end, dr, const_lon_name, const_
                 saved[var] = reduced_cube
 
     return saved, orig_saved
-
 
 
 def extract_data(algae_type, variables, start_date, end_date, num_ens, monthly=False, lat=None, lon=None,
@@ -340,20 +339,15 @@ def extract_data(algae_type, variables, start_date, end_date, num_ens, monthly=F
     # Get files and min and maximum year
     files, min_yr, max_yr = get_files_time_period(algae_type, yr_s, yr_e)
 
-    # Save list of dictionaries - each dict in the list is an ensemble
-    saved = [{} for _ in range(num_ens)]
-    # Save original (without sample or grid point)
-    orig_saved = None
-    if sample or grid:
-        orig_saved = [{} for _ in range(num_ens)]
-
     # Get files in absolute path saved in ensemble groups
     files = [os.path.join(path, file) for file in files]
     ens_files = [[] for _ in range(num_ens)]
     abs_files = [[] for _ in range(num_ens)]
 
     for i in range(len(files)):
-        ens_indx = ens_to_indx(get_ens_num(files[i]))
+        ens_indx = ens_to_indx(get_ens_num(files[i]), num_ens)
+        if ens_indx == -1:  # Ensemble number > Number of ensembles
+            continue
         # save in ens_files
         ens_files[ens_indx].append(files[i])
         # Get absolute path

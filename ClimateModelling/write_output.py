@@ -3,6 +3,7 @@ from utils import *
 from netCDF4 import Dataset, MFDataset
 import pickle
 import xarray as xr
+from nco import Nco
 
 
 def write_means_to_netcdf_file(ens_files, abs_files, ens_means, analysis_str, variables, start_date, end_date, argv,
@@ -390,7 +391,6 @@ def write_user_analysis_to_netcdf_file(ens_files, abs_files, user_analysis, func
     assert check_list_date(start_date) and check_list_date(end_date)
 
     # Initialise Nco
-    from nco import Nco
     nco = Nco()
 
     # Start and end date string

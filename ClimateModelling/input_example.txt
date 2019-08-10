@@ -35,18 +35,18 @@
 #
 # REQUIRED ARGUMENTS
 # ------------------------------------------------------------------------------
-Prefix: E1_north_america
-Start date of analysis: 1970
-Variables: air_temperature
+Prefix: dic_deltap
+Start date of analysis: 1953
+Variables: dic_deltap
 Number of ensembles: 1
 #
 # ------------------------------------------------------------------------------
 # OPTIONAL ARGUMENTS
 # ------------------------------------------------------------------------------
-End date of analysis: 1970
+End date of analysis: 1953
 Analysis: mean, rms
 Total ensemble stats: False
-Plot: 1
+Plot:
 Monthly: False
 Grid:
 Sample:
