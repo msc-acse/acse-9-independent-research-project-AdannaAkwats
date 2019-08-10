@@ -8,5 +8,5 @@ scipy==1.2.1
 xarray==0.12.3
 Shapely==1.6.4.post2
 Cython==0.28.2
-six==1.11.0
-pyproj==1.9.6
+seaborn-0.9.0
+cdo=1.5.3
