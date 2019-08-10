@@ -10,5 +10,3 @@ Shapely==1.6.4.post2
 Cython==0.28.2
 six==1.11.0
 pyproj==1.9.6
-scitools-iris==2.2.0
-cartopy==0.17.0
