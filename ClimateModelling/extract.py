@@ -83,7 +83,7 @@ def get_mask(maskfile, cube_data, lons, lats):
     tiles = None
     cube_shape = cube_data.shape
     if level is None:
-        level = cube_shape[0]
+        level = [1, cube_shape[0]]
     if len(cube_shape) == 3:
         if len(level) == 2:
             tiles = (level[1] - level[0] + 1, 1, 1)
