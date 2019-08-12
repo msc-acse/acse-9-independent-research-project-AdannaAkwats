@@ -1,30 +1,19 @@
 # IRP - A software package for Climate Modelling diagnostics
 
-Written in Python 3 and contains functions that enable generate relevant diagnostics. 
+Written in Python 3 and contains functions that calculate climate model diagnostics. 
 
-Currently when called, the program calculates the mean of each ensemble and saves the data in folder ``analysis\ensemble_means``.
 ## Getting Started
 - Download / clone the repository unto your computer
-- Install **netCDF4** ([pip](https://pypi.org/project/netCDF4/) or [conda](https://anaconda.org/anaconda/netcdf4))
-    ##### Using PyPI
+- You must first download and install conda, for example from http://conda.pydata.org/miniconda.html in order to install some dependencies used in the package. 
+- Once conda is installed, then you can install **Iris** using conda on any platform with the following command:
     ```
-    pip install netCDF4
+    conda install -c conda-forge iris
     ```
-    ##### Using conda
+- Install **basemap** for plotting
     ```
-    conda install -c anaconda netcdf4 
+    conda install basemap
     ```
-- Install **nco** ([pip](https://pypi.org/project/nco/) or [conda](https://anaconda.org/conda-forge/nco))
-    ##### Using PyPI
-    ```
-    pip install nco
-    ```
-    ##### Using conda
-    ```
-    conda install -c conda-forge nco
-    ```
-
-- Install the required python package dependencies with the following command:
+- Install the rest of the required python package dependencies with the following command:
 ```
 pip install -r requirements.txt
 ```
@@ -32,7 +21,8 @@ pip install -r requirements.txt
 ## Usage
 
 ### Input and output folders
-The `.nc` data files to be analysed should be stored in the folder `data`. The `results` folder will store the analysis, once computed. 
+The `.nc` data files to be analysed should be stored in the folder `DATA`. The `RESULTS` folder will store the analysis, once computed. 
+The file names can be changed in the file `directories.py`
 
 There are two ways to call the program: 
 
@@ -40,22 +30,24 @@ There are two ways to call the program:
 ```
 python main.py -h 
 
-usage: CLIMATE_ANALYSIS [-h] -v variables [variables ...] [-p] [-m]
-                        [-g lat lon | -s lat lon] [-mk filename] [-o] [-cv] -e
-                        number_of_ensembles
-                        [-ht [number_of_bins_in_histogram]]
+usage: CLIMATE_ANALYSIS [-h] -v variables [variables ...] [-p ensemble_number]
+                        [-m] [-g lat lon | -s lat lon | -lc LON_CENTRE]
+                        [-mk filename] [-o] [-cv] -e number_of_ensembles
+                        [-ht [number_of_bins_in_histogram]] [-se]
+                        [-u file_name function_name] [-a [ANALYSIS]] [-ca]
+                        [-t]
                         prefix start_date [end_date]
 
-The functions will give statistical analysis of the climate data
+The functions will give statistical analysis of the climate data 
                                      presented
     FILENAMES FORMAT
     ----------------
-    - The filenames should be in the format "{START OF FILENAME}_ens{NUM}_{YEAR}.nc", where {START OF FILENAME} is
-    the prefix of the file, this can be the algae type etc, {NUM} is the ensemble number and {YEAR} is the year.
+    - The filenames should be in the format "{START OF FILENAME}_ens{NUM}_{YEAR}.nc", where {START OF FILENAME} is 
+    the prefix of the file, this can be the algae type etc, {NUM} is the ensemble number and {YEAR} is the year. 
    OR if you have multiple years stored in one file then:
-   - The filenames should be in the format "{START OF FILENAME}_ens{NUM}_{YEAR 1}_{YEAR 2}.nc", where
-   {START OF FILENAME} is the prefix of the file, this can be the algae type etc, {NUM} is the ensemble number and
-   {YEAR 1} and {YEAR 2} are the start and end year of the data in the file.
+   - The filenames should be in the format "{START OF FILENAME}_ens{NUM}_{YEAR 1}_{YEAR 2}.nc", where 
+   {START OF FILENAME} is the prefix of the file, this can be the algae type etc, {NUM} is the ensemble number and 
+   {YEAR 1} and {YEAR 2} are the start and end year of the data in the file. 
    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     ASSUMPTIONS
     ------------
@@ -64,16 +56,16 @@ The functions will give statistical analysis of the climate data
     - Grids have constant latitude and longitude.
     ------------
     - Some example files are in the data folder.
-
+    
 
 positional arguments:
-  prefix                This is the prefix of the file. This can be the type of algae e.g. dic_deltap, fndet_100, jprod_ndi_100.
-  start_date            Start date of analysis
+  prefix                This is the prefix of the file. This can be the type of algae e.g. dic_deltap, fndet_100, jprod_ndi_100. 
+  start_date            Start date of analysis 
                             Can be in the following formats:
                             ----------------------------------
                             YYYY-MM-DD : e.g. 2020-04-12
                             YYYY-MM    : e.g. 2020-04
-                            YYYY       : e.g. 2020
+                            YYYY       : e.g. 2020 
                             - If day is not given, the 1st of the given month will be used i.e 2020-04 => 2020-04-01
                             - If day and month is not given, 1st Jan will be used as the start date i.e 2020 => 2020-01-01
   end_date               <Not required> End date of analysis - format is the same as start_date
@@ -88,25 +80,53 @@ other arguments:
   -h, --help            show this help message and exit
   -v variables [variables ...], --vars variables [variables ...]
                         <Required> Variables of data to analyse
-  -p, --plot            Save plots of analysis in results as a .png file.
+  -p ensemble_number, --plot ensemble_number
+                        Plot map, histogram and timeseries graphs
+                            E.g. --plot 1
+                            The ensemble to plot must be included. 
   -m, --monthly         Data in file is stored in monthly increments.
   -g lat lon, --grid lat lon
                         Uses grid point that latitude and longitude lies in.
   -s lat lon, --sample lat lon
                         Uses sample point given by latitude and longitude using interpolation.
+  -lc LON_CENTRE, --lon_centre LON_CENTRE
+                        Longitude to centre map on.
   -mk filename, --mask filename
                         Uses masking grid given as a file (contains boolean array to be imposed on the global grid).
-  -o, --output          Save data output of histogram and timeseries analysis in results as a .dat file.
+  -o, --output          If plot option selected, save data output of histogram and timeseries analysis in RESULTS as a .dat file.
   -cv, --covary         Analysis on how the variables given in -v vary with each other.
   -e number_of_ensembles, --ens number_of_ensembles
                         <Required> The number of ensembles of the data. If not set, the default value = 1
   -ht [number_of_bins_in_histogram], --hist [number_of_bins_in_histogram]
-                         Options for bin size selection. If not set, the default value = fd (Freedman Diaconis Estimator). The list of the potential options are listed in:
+                         Options for bin size selection. If not set, the default value = fd (Freedman Diaconis Estimator). The list of the potential options are listed in: 
                         https://docs.scipy.org/doc/numpy/reference/generated/numpy.histogram_bin_edges.html#numpy.histogram_bin_edges
+  -se, --save_extract   Save extracted (iris.cube) data in pkl file.
+  -u file_name function_name, --user file_name function_name
+                        Use function written by the user and stored in user_function folder for analysis. 
+                                                file_name : name of file that contains function in user_function folder
+                                                function_name : name of function to call 
+                                                Note: user functions are expected to only take in a cube as an argument. An example of a function 
+                                                can be found in user_function/example_function.py
+                                                
+  -a [ANALYSIS], --analysis [ANALYSIS]
+                        Analysis performed on data set.
+                            If not specified, then all analysis listed below will be performed.
+                            Types of analysis:
+                            - mean
+                            - std (Standard deviation)
+                            - rms (Root mean squared error)
+                            - median
+                            You can also select a combination of analysis to perform e.g. -a mean rms 
+  -ca, --areas          Calculate areas of grid boxes of latitude and longitude and saves to NetCDF file areas.nc in results folder
+  -t, --total           Total ensemble stats: True/False : The analysis will be performed over the whole ensemble given.
+                                                - If set True, all the ensembles will be averaged as a collection.
+                                                - If set False, the ensembles will be averaged individually.
+
 ```
 #### Example commands
+The file `E1_north_america_ens101_1970.nc` is given as example data in the `DATA` folder. To calculate the mean of variable `air_temperature`, we would call:
 ```
-python main.py sst 1953 1955 -v sst -e 12
+python main.py E1_north_america 1970 -v air_temperature -e 1 -a mean -p 1
 ```
 ### Using an input file
 
@@ -124,21 +144,32 @@ Number of ensembles: 1
 # OPTIONAL ARGUMENTS
 # ------------------------------------------------------------------------------
 End date of analysis:
-Plot: False
+Analysis: mean
+Total ensemble stats: True
+Plot:
 Monthly: False
 Grid:
 Sample:
 Mask file:
 Save Output: False
 Covary: False
-Histogram bin selection: fd
+Histogram bin selection:
+Longitude centre:
+Save extract data: False
+User function:
+Calculate areas: True
 #
 ```
 After filling the values in the file, to run the program simply call: 
 ```
 python main.py
 ```
-An pre-filled input file is given as an example in `input_example.txt`.
+#### Example input file
+A pre-filled input file is given as an example in `input_example.txt`, and can be run by calling:
+```
+python main.py -ex
+```
+This also calculates the mean of `air_temperature` given in `DATA\E1_north_america_ens101_1970.nc`.
 
 ## Assumptions
 - Files do not have overlapped data.
