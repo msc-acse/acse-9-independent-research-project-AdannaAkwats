@@ -80,10 +80,11 @@ def ex(year, monthly=False):
     dataset.close()
 
 
-def ex_level(year):
+def ex_level(year, swap=False):
     """
     Create file with daily data for specific year >= 2000, one variable in file, added level to dimensions
     :param year: year of file
+    :param swap: if swap, then change time and level dim
     """
     assert (year >= 2000)
     # time - 365 daily , 2000 - 2005
@@ -103,7 +104,10 @@ def ex_level(year):
     longitudes = dataset.createVariable('longitude', np.float64, ('longitude',))
 
     # Create the 3D variable
-    temp = dataset.createVariable('temp', np.float32, ('level', 'time', 'latitude', 'longitude'), fill_value=-1.e+20)
+    if not swap:
+        temp = dataset.createVariable('temp', np.float32, ('level', 'time', 'latitude', 'longitude'), fill_value=-1.e+20)
+    else:
+        temp = dataset.createVariable('temp', np.float32, ('time', 'level', 'latitude', 'longitude'), fill_value=-1.e+20)
 
     # Global Attributes
     dataset.description = 'Example NetCDF file'
@@ -133,7 +137,12 @@ def ex_level(year):
 
     nlats = len(dataset.dimensions['latitude'])
     nlons = len(dataset.dimensions['longitude'])
-    temp[0:5, :, :, :] = uniform(size=(5, 365, nlats, nlons))
+
+    if not swap:
+        temp[0:5, :, :, :] = uniform(size=(5, 365, nlats, nlons))
+    else:
+        temp[:, :, :, :] = uniform(size=(365, 5, nlats, nlons))
+
     times[:] = np.asarray(range(365)) + 365 * (year - 2000)
 
     print("New file " + file_name + " created in " + directories.CLIMATE_DATA + " directory.")
@@ -277,7 +286,7 @@ def ex2_level(year):
 # ex(2002)
 # ex(2003)
 #
-# ex_level(2000)
+ex_level(2000, swap=True)
 # ex2_level(2000)
 
 # ex(2000, monthly=True)
@@ -285,7 +294,7 @@ def ex2_level(year):
 # ex(2002, monthly=True)
 # ex(2003, monthly=True)
 
-ex2(2000)
-ex2(2001)
-ex2(2002)
-ex2(2003)
+# ex2(2000)
+# ex2(2001)
+# ex2(2002)
+# ex2(2003)
