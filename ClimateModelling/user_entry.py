@@ -258,7 +258,7 @@ def user_entry():
                         Note: user functions are expected to only take in a cube as an argument. An example of a function 
                         can be found in user_function/example_function.py
                         """)
-    parser.add_argument('-a', '--analysis', nargs='?', help="""Analysis performed on data set.
+    parser.add_argument('-a', '--analysis', nargs='*', help="""Analysis performed on data set.
     If not specified, then all analysis listed below will be performed.
     Types of analysis:
     - mean
