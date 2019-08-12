@@ -35,26 +35,26 @@
 #
 # REQUIRED ARGUMENTS
 # ------------------------------------------------------------------------------
-Prefix: ex1level
-Start date of analysis: 2000
-Variables: temp
+Prefix: E1_north_america
+Start date of analysis: 1970
+Variables: air_temperature
 Number of ensembles: 1
 #
 # ------------------------------------------------------------------------------
 # OPTIONAL ARGUMENTS
 # ------------------------------------------------------------------------------
 End date of analysis:
-Analysis: mean, rms
+Analysis: mean
 Total ensemble stats: False
 Plot: 1
 Monthly: False
 Grid:
 Sample:
-Mask file: mask_example.txt
+Mask file:
 Save Output: True
 Covary: False
 Histogram bin selection: fd
-Longitude centre: 0
+Longitude centre:
 Save extract data: False
 User function:
 Calculate areas: False
