@@ -50,6 +50,7 @@ def get_mask(maskfile, cube_data, lons, lats):
     assert lats is not None
 
     # Get polygons from mask file
+    maskfile = os.path.join(directories.INPUT, maskfile)
     polygons, level = get_polygons(maskfile)
 
     # if only one polygon
@@ -105,6 +106,13 @@ def get_mask(maskfile, cube_data, lons, lats):
 
 
 def calculate_areas(cube, lat_name, lon_name):
+    """
+    Calculate areas of grid boxes of the cube given
+    :param cube: iris.cube
+    :param lat_name: name of latitude coordinate, string
+    :param lon_name: name of longitude cootdinate, string
+    :return: saves the areas in a netcdf file
+    """
     cube.coord(lat_name).guess_bounds()
     cube.coord(lon_name).guess_bounds()
 

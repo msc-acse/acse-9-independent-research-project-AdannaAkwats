@@ -38,12 +38,12 @@
 Prefix: dic_deltap
 Start date of analysis: 1953
 Variables: dic_deltap
-Number of ensembles: 1
+Number of ensembles: 3
 #
 # ------------------------------------------------------------------------------
 # OPTIONAL ARGUMENTS
 # ------------------------------------------------------------------------------
-End date of analysis: 1953
+End date of analysis: 1954
 Analysis: mean, rms
 Total ensemble stats: False
 Plot:
@@ -80,7 +80,6 @@ Calculate areas: False
 # Variables: Variables of data to analyse
 # ------
 # Number of ensembles: The number of ensembles of the data.
-#                      If not set, the default value = 1
 # ------------------------------------------------------------------------------
 # OPTIONAL ARGUMENTS
 # ------------------------------------------------------------------------------

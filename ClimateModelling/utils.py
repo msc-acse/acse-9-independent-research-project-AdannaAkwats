@@ -15,13 +15,65 @@ Script that contains useful functions
 """
 
 
+def check_valid_order(start_date, end_date):
+    """
+    Checks that end date is after start date
+    :param start_date: [day, month, year]
+    :param end_date: [day, month, year]
+    :return: true if end_date is after start date
+    """
+
+    day_s, mon_s, yr_s = start_date[0], start_date[1], start_date[2]
+    day_e, mon_e, yr_e = end_date[0], end_date[1], end_date[2]
+
+    start = date(yr_s, mon_s, day_s)
+    end = date(yr_e, mon_e, day_e)
+
+    return (end - start).days > 0
+
+
+def check_analysis(a):
+    """
+    Check analysis a is valid
+    :param a: list of strings
+    :return: boolesn or throws error
+    """
+
+    assert(isinstance(a, list))
+
+    # List of analysis that can be selected
+    ans = ['mean', 'rms', 'std', 'median']
+
+    # Check that analysis a is in ans
+    all_elements_contained = all(elem in ans for elem in a)
+
+    if not all_elements_contained:
+        print("ERROR in function check_analysis: Analysis given cannot be selected. "
+              "Ensure that analysis is one or more of [mean, std, rms, median].")
+        sys.exit()
+    return True
+
+
+def check_variables_covary(varbs):
+    """
+    Check only 2 variables given - this function is called if covariance is set
+    :param varbs: list of variables (string)
+    :return: boolean or throws error
+    """
+    assert (isinstance(varbs, list))
+    if len(varbs) != 2:  # If not 2 variables, then cannot perform covariance
+        print("ERROR in function check_variables_covary: Selecting covariance required two variables.")
+        sys.exit()
+    return True
+
+
 def get_ens_num(file):
     """
     Return the ensemble number in file name
     :param file: file name, string
     :return: ensemble number, int
     """
-    f = 'ens' + '(\d+)'
+    f = r'ens(\d+)'
     match = re.search(f, file)
     if match:
         return int(match.group(1))
@@ -33,7 +85,8 @@ def get_file_two_years(file):
     :param file: file name, string
     :return: years, ints
     """
-    f = '_' + '(\d+)' + '_' + '(\d+)'
+    f = r'_(\d+)_(\d+)'
+
     match = re.search(f, file)
     if match:
         return int(match.group(1)), int(match.group(2))
@@ -60,6 +113,7 @@ def ens_to_indx(ens_num, number_of_ensembles, max_start=1000000):
     # Check if its within the number of ensembles given
     if res == -1:
         print("ERROR: ens_to_index function: ensemble number cannot be converted to index")
+        sys.exit()
     elif res + 1 > number_of_ensembles:
         res = -1
     return res
@@ -302,7 +356,7 @@ def find_middle(arr):
     """
     middle = float(len(arr))/2
     if middle % 2 != 0:
-        return arr[int(middle - .5)], int(middle)
+        return arr[int(middle - .5)], int(middle - .5)
     return arr[int(middle)], int(middle)
 
 
@@ -360,6 +414,7 @@ def get_bins_from_file(hist_file, variables):
     """
 
     bin_dict = defaultdict(list)
+    x, y = None, None
 
     with open(hist_file, 'r') as hf:
         var_seen, cur_var_name = False, None
@@ -389,6 +444,10 @@ def get_bins_from_file(hist_file, variables):
                         sys.exit()
                     vars_seen_in_file.append(cur_var_name)
                     continue
+                elif key_var[0].strip() == 'x':
+                    x = key_var[1].strip()
+                elif key_var[0].strip() == 'y':
+                    y = key_var[1].strip()
                 else:
                     try:
                         bin_ = float(curline.strip())
@@ -397,5 +456,15 @@ def get_bins_from_file(hist_file, variables):
                         print("ERROR in function get_bins_from_file: bin number " + str(curline) + " is not recognised "
                                                                                                    "as a number.")
                         sys.exit()
-    return bin_dict
 
+
+    if x is None and y is None:
+        print("ERROR in function get_bins_from_file: x-axis and y-axis is not defined.")
+    return bin_dict, x, y
+
+
+def print_end_statement():
+    print("PROGRAM FINSISHED.")
+    print("Progress and potential errors are logged in message.log file.")
+    print("To open message.log, type in cmd line: less message.log")
+    print("  Press q to quit file when finished.")

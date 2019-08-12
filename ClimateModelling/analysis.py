@@ -118,42 +118,6 @@ def compute_enso_indices():
     print(cdo.operators)
     return None
 
-#
-# def compute_user_analysis(list_ens, file_name, func_name):
-#     """
-#     Use function given by user for analysis
-#     :param list_ens: the list of ensembles (dicts) containing the data of the climate variables
-#     :param file_name: name of python script where function is
-#     :param func_name: name of function to call
-#     :param args: other arguments (excluding cube)
-#     :return: analysed data of each variable and ensemble
-#     """
-#     # Assertions
-#     assert list_ens is not None
-#     assert file_name is not None
-#     assert func_name is not None
-#
-#     # Get folder name
-#     pkg = directories.USER_FUNCTION_PACKAGE
-#
-#     # If .py is at the end of file name, remove it
-#     if '.py' in file_name:
-#         file_name = file_name.replace('.py', '')
-#
-#     # Construct module to import
-#     module = pkg + '.' + file_name
-#
-#     # Call user function
-#     user_script = importlib.import_module(module)
-#     user_func = getattr(user_script, func_name)
-#
-#     # Call and return user function
-#     res = user_func(list_ens)
-#
-#     print("function compute_user_analysis: User analysis of data successfully computed.")
-#
-#     return res
-#
 
 def compute_user_analysis(list_ens, file_name, func_name):
     """
@@ -170,7 +134,7 @@ def compute_user_analysis(list_ens, file_name, func_name):
     assert func_name is not None
 
     # Get folder name
-    pkg = directories.USER_FUNCTION_PACKAGE
+    pkg = directories.INPUT + '.' + directories.USER_FUNCTION_PACKAGE
 
     # If .py is at the end of file name, remove it
     if '.py' in file_name:

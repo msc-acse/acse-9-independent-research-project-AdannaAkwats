@@ -1,4 +1,6 @@
 import matplotlib.pyplot as plt
+import matplotlib
+from mpl_toolkits.mplot3d import Axes3D
 from utils import *
 import iris
 import iris.plot as iplt
@@ -7,6 +9,7 @@ import seaborn as sns
 from iris.pandas import as_data_frame, as_series
 from pandas.plotting import register_matplotlib_converters
 import sys
+import directories
 
 
 def create_histogram(list_ens, start_date, end_date, variables, monthly=False, save_out=True, sel='fd', ens_num=1,
@@ -30,9 +33,10 @@ def create_histogram(list_ens, start_date, end_date, variables, monthly=False, s
     assert variables is not None
 
     # If file is given, select the bin edges in the file
-    bins_dict = None
+    bins_dict, x, y = None, None, None
     if '.' in sel:
-        bins_dict = get_bins_from_file(sel, variables)
+        hist_file = os.path.join(directories.INPUT, sel)
+        bins_dict, x, y = get_bins_from_file(hist_file, variables)
 
     # Daily or monthly
     time_str = "daily"
@@ -51,7 +55,7 @@ def create_histogram(list_ens, start_date, end_date, variables, monthly=False, s
     full_datum = []
     for var in variables:
         # Get cube from dictionary and flatten data
-        cube = list_ens[ens_num][var]
+        cube = list_ens[ens_num-1][var]
         full_data = cube.data.flatten()
         # Get indices of where value is nan
         indices = []
@@ -90,7 +94,7 @@ def create_histogram(list_ens, start_date, end_date, variables, monthly=False, s
     if cov:  # Plot 2D histogram
         fig, ax = plt.subplots()
         ax.set_title(title_name)
-        _, _, _, img = ax.hist2d(full_datum[0], full_datum[1])
+        _, _, _, img = ax.hist2d(full_datum[0], full_datum[1], bins=[bins_dict[x], bins_dict[y]])
         ax.set_xlabel(cubes[0].name() + ' (' + str(cubes[0].units) + ')')
         ax.set_ylabel(cubes[1].name() + ' (' + str(cubes[1].units) + ')')
         plt.colorbar(img, ax=ax, label='Frequency')
@@ -125,7 +129,7 @@ def create_histogram(list_ens, start_date, end_date, variables, monthly=False, s
                 hist, xs, ys = np.histogram2d(full_datum[0].data, full_datum[1].data)
             else:
                 hist, xs, ys = np.histogram2d(full_datum[0].data, full_datum[1].data,
-                                          bins=[bins_dict[variables[0]], bins_dict[variables[1]]])
+                                              bins=[bins_dict[x], bins_dict[y]])
             # Remove unnecessary last element
             xs = xs[:-1]
             ys = ys[:-1]
@@ -175,7 +179,7 @@ def create_timeseries(list_ens, start_date, end_date, variables,  monthly=False,
 
     for variable in variables:
         # Get cube from dictionary
-        cube = list_ens[ens_num][variable]
+        cube = list_ens[ens_num-1][variable]
         # Construct title name
         title_name = cube.name() + " measured " + time_str + " between " + str(start_date[2]) + "-" + str(start_date[1]) + "-" + \
                      str(start_date[0]) + " and " + str(end_date[2]) + "-" + str(end_date[1]) + "-" + str(end_date[0]) \
@@ -281,12 +285,12 @@ def plot_map(list_ens, variables, analysis_str=None, ens_num=1, save_out=False, 
                 if total:
                     cube = list_ens[a][variable]
                 else:
-                    cube = list_ens[ens_num][a][variable]
+                    cube = list_ens[ens_num-1][a][variable]
             else:
                 if total:
                     cube = list_ens[variable]
                 else:
-                    cube = list_ens[ens_num][variable]
+                    cube = list_ens[ens_num-1][variable]
 
             # Plot title name
             title_name = analysis_str[a] + " of " + cube.name() + " of ensemble " + str(ens_num) + " with variable " + str(variable)
@@ -307,6 +311,7 @@ def plot_map(list_ens, variables, analysis_str=None, ens_num=1, save_out=False, 
                 cf = ax.contourf(lons.points, lats.points, masked_array, cmap=brewer_cmap)
             except Exception:
                 print("ERROR in function plot_map: cube is not 2D.")
+                plt.close(fig)
                 return None
             # cube.intersection(longitude=(-45, 45))  # get specific range
             fig.colorbar(cf, ax=ax, label=cube.units)
