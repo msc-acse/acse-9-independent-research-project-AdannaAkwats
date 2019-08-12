@@ -252,6 +252,31 @@ def extract_parallel(variables, till_start, till_end, dr, const_lon_name, const_
 
         # Masking
         if maskfile is not None:
+            # Swap dimensions if not (depth, time, lat, lon)
+            c_n = [c.name() for c in cube.coords(dim_coords=True)]
+            indices = []
+            if len(c_n) == 4:
+                for dim in c_n:
+                    if dim == depth_name:
+                        indices.append(0)
+                    if dim == time_name:
+                        indices.append(1)
+                    if dim == const_lat_name:
+                        indices.append(2)
+                    if dim == const_lon_name:
+                        indices.append(3)
+            elif len(c_n) == 3:
+                for dim in c_n:
+                    if dim == time_name:
+                        indices.append(0)
+                    if dim == const_lat_name:
+                        indices.append(1)
+                    if dim == const_lon_name:
+                        indices.append(2)
+
+            if indices != [0, 1, 2, 3]:
+                cube.transpose(indices)
+
             # Get mask array and update cube
             if not mask_set:
                 mask_arr, level = get_mask(maskfile, cube.data, lons, lats)
@@ -270,8 +295,12 @@ def extract_parallel(variables, till_start, till_end, dr, const_lon_name, const_
                 else:
                     reduced_cube = cube[level[0] - 1]
                 reduced_cube.data = mask_cube
+                # Transpose back
+                reduced_cube.transpose(indices)
             else:
                 cube.data = mask_cube
+                # Transpose back
+                cube.transpose(indices)
 
         if sample or grid:
             # Save interpolated values
