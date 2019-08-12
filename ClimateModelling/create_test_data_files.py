@@ -277,7 +277,7 @@ def ex2_level(year):
 # ex(2002)
 # ex(2003)
 #
-# ex_level(2000)
+ex_level(2000)
 # ex2_level(2000)
 
 # ex(2000, monthly=True)
@@ -285,7 +285,7 @@ def ex2_level(year):
 # ex(2002, monthly=True)
 # ex(2003, monthly=True)
 
-ex2(2000)
-ex2(2001)
-ex2(2002)
-ex2(2003)
+# ex2(2000)
+# ex2(2001)
+# ex2(2002)
+# ex2(2003)

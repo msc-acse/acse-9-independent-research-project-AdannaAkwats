@@ -268,7 +268,7 @@ def get_polygons(mask_file):
                             sys.exit()
                     else:
                         try:
-                            level = int(level)
+                            level = [int(level)]
                         except Exception:
                             print("ERROR in function get_polygons: Level number is not recognised as an integer.")
                             sys.exit()
