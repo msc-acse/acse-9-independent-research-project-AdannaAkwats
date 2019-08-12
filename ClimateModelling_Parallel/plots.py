@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import matplotlib
 from mpl_toolkits.mplot3d import Axes3D
+from mpl_toolkits.basemap import Basemap
 from utils import *
 import iris
 import iris.plot as iplt
@@ -281,16 +282,10 @@ def plot_map(list_ens, variables, analysis_str=None, ens_num=1, save_out=False, 
         for a in range(len(analysis_str)):
             # Extract time in cube
             cube = None
-            if len(analysis_str) > 1:
-                if total:
-                    cube = list_ens[a][variable]
-                else:
-                    cube = list_ens[ens_num-1][a][variable]
+            if total:
+                cube = list_ens[a][variable]
             else:
-                if total:
-                    cube = list_ens[variable]
-                else:
-                    cube = list_ens[ens_num-1][variable]
+                cube = list_ens[ens_num-1][a][variable]
 
             # Plot title name
             title_name = analysis_str[a] + " of " + cube.name() + " of ensemble " + str(ens_num) + " with variable " + str(variable)
@@ -307,16 +302,27 @@ def plot_map(list_ens, variables, analysis_str=None, ens_num=1, save_out=False, 
             lons = cube.coord('longitude')
             masked_array = np.ma.array(cube.data, mask=np.isnan(cube.data))
 
+            # Get max and min of lons and lats
+            lon_min, lon_max, lat_min, lat_max = min(lons.points), max(lons.points), min(lats.points), max(lats.points)
+
             try:
-                cf = ax.contourf(lons.points, lats.points, masked_array, cmap=brewer_cmap)
-            except Exception:
-                print("ERROR in function plot_map: cube is not 2D.")
+                # Overlay world map
+                m = Basemap(projection='mill', lat_ts=10, llcrnrlon=lon_min, \
+                            urcrnrlon=lon_max, llcrnrlat=lat_min, urcrnrlat=lat_max, \
+                            resolution='c', ax=ax)
+                # Plot actual data
+                x, y = m(*np.meshgrid(lons.points, lats.points))
+                cf = m.contourf(x, y, masked_array, shading='flat', cmap=brewer_cmap)
+                m.drawcoastlines()
+                m.drawparallels(np.arange(-90., 90., 30.), labels=[1, 0, 0, 0], ax=ax)
+                m.drawmeridians(np.arange(-180., 180., 60.), labels=[0, 0, 0, 1], ax=ax)
+            except Exception as err:
+                print("ERROR in function plot_map: " + str(err))
                 plt.close(fig)
                 return None
-            # cube.intersection(longitude=(-45, 45))  # get specific range
             fig.colorbar(cf, ax=ax, label=cube.units)
-            ax.set_xlabel("Longitude (" + str(lons.units) + ")")
-            ax.set_ylabel("Latitude (" + str(lats.units) + ")")
+            # ax.set_xlabel("Longitude (" + str(lons.units) + ")")
+            # ax.set_ylabel("Latitude (" + str(lats.units) + ")")
 
             # Add a citation to the plot.
             iplt.citation(iris.plot.BREWER_CITE)
