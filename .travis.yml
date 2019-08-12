@@ -24,4 +24,4 @@ install:
 #   - conda install -c conda-forge iris
 #  - pip install .
 # command to run tests
-script: pytest ClimateModelling/main_tests.py
+script: pytest ClimateModelling/tests
