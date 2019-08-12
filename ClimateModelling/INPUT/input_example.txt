@@ -35,22 +35,22 @@
 #
 # REQUIRED ARGUMENTS
 # ------------------------------------------------------------------------------
-Prefix: dic_deltap
-Start date of analysis: 1953
-Variables: dic_deltap
-Number of ensembles: 2
+Prefix: ex1level
+Start date of analysis: 2000
+Variables: temp
+Number of ensembles: 1
 #
 # ------------------------------------------------------------------------------
 # OPTIONAL ARGUMENTS
 # ------------------------------------------------------------------------------
-End date of analysis: 1954
+End date of analysis:
 Analysis: mean, rms
 Total ensemble stats: False
 Plot: 1
 Monthly: False
 Grid:
 Sample:
-Mask file:
+Mask file: mask_example.txt
 Save Output: True
 Covary: False
 Histogram bin selection: fd

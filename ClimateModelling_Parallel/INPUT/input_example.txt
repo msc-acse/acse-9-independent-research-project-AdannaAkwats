@@ -38,7 +38,7 @@
 Prefix: dic_deltap
 Start date of analysis: 1953
 Variables: dic_deltap
-Number of ensembles: 3
+Number of ensembles: 10
 #
 # ------------------------------------------------------------------------------
 # OPTIONAL ARGUMENTS

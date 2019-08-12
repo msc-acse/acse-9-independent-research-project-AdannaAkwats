@@ -86,14 +86,14 @@ def get_mask(maskfile, cube_data, lons, lats):
         level = cube_shape[0]
     if len(cube_shape) == 3:
         if len(level) == 2:
-            tiles = (level[1] - level[0], 1, 1)
+            tiles = (level[1] - level[0] + 1, 1, 1)
         else:
             tiles = (1, 1, 1)
     elif len(cube_shape) == 4:  # depth is included
         if len(level) == 2:
-            tiles = (1, cube_shape[1], 1, 1)
+            tiles = (level[1] - level[0] + 1, cube_shape[1], 1, 1)
         else:
-            tiles = (level[1] - level[0], cube_shape[1], 1, 1)
+            tiles = (1, cube_shape[1], 1, 1)
 
     mask_arr = np.tile(m, tiles)
 
@@ -333,11 +333,22 @@ def extract_data(algae_type, variables, start_date, end_date, num_ens, monthly=F
                     mask_arr, level = get_mask(maskfile, cube.data, lons, lats)
                     mask_set = True
 
-                # Get specific cube.data
-                mask_cube = np.ma.array(cube.data[level[0]:level[1]], mask=~mask_arr)
+                # Check level is within limits
+                depth_c = cube.coord_dims(depth_name)
+                print(depth_c)
+
+                if len(level) == 2:
+                    # Get specific cube.data
+                    level_low, level_high = level[0] - 1, level[1]
+                    mask_cube = np.ma.array(cube.data[level_low:level_high], mask=~mask_arr)
+                else: # only 1 level given
+                    mask_cube = np.ma.array(cube.data[level[0]-1], mask=~mask_arr)
 
                 if cube.data.shape != mask_cube.shape:
-                    reduced_cube = cube[:mask_cube.shape[0]]
+                    if len(level) == 2:
+                        reduced_cube = cube[level_low:level_high]
+                    else:
+                        reduced_cube = cube[level[0]-1]
                     reduced_cube.data = mask_cube
                 else:
                     cube.data = mask_cube
