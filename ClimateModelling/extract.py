@@ -84,6 +84,19 @@ def get_mask(maskfile, cube_data, lons, lats):
     cube_shape = cube_data.shape
     if level is None:
         level = [1, cube_shape[0]]
+
+    # Check level is within limits
+    if len(level) == 1:
+        if level > cube_data.shape[0] or level < 0:
+            print("ERROR in function get_mask: level given is not within depth range 0 <= level <= "
+                  + str(cube_data.shape[0]))
+            sys.exit()
+    elif len(level) == 2:
+        if level[1] > cube_data.shape[0] or level[0] < 0:
+            print("ERROR in function get_mask: level given is not within depth range 0 <= level <= "
+                  + str(cube_data.shape[0]))
+            sys.exit()
+            
     if len(cube_shape) == 3:
         if len(level) == 2:
             tiles = (level[1] - level[0] + 1, 1, 1)
@@ -332,10 +345,6 @@ def extract_data(algae_type, variables, start_date, end_date, num_ens, monthly=F
                 if not mask_set:
                     mask_arr, level = get_mask(maskfile, cube.data, lons, lats)
                     mask_set = True
-
-                # Check level is within limits
-                depth_c = cube.coord_dims(depth_name)
-                print(depth_c)
 
                 if len(level) == 2:
                     # Get specific cube.data
