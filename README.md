@@ -124,7 +124,7 @@ other arguments:
 
 ```
 #### Example commands
-There is an file in the `DATA` folder that has the variable air_temperature. To calculate the mean of this, we would call:
+The file `E1_north_america_ens101_1970.nc` is given as example data in the `DATA` folder. To calculate the mean of variable `air_temperature`, we would call:
 ```
 python main.py E1_north_america 1970 -v air_temperature -e 1 -a mean -p 1
 ```
@@ -169,6 +169,7 @@ A pre-filled input file is given as an example in `input_example.txt`, and can b
 ```
 python main.py -ex
 ```
+This also calculates the mean of `air_temperature` given in `DATA\E1_north_america_ens101_1970.nc`.
 
 ## Assumptions
 - Files do not have overlapped data.
