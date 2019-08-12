@@ -1,10 +1,11 @@
 
-# The directories we use to store data and the analysis data
-CLIMATE_DATA = "data"
-ANALYSIS = "results"
+# The directories we use to store data, input and the analysis data
+CLIMATE_DATA = "DATA"
+INPUT = "INPUT"
+ANALYSIS = "RESULTS"
 MEANS = "ensemble_averages"
 
-# Directory used to store user functions
+# Directory used to store user functions (in INPUT folder)
 USER_FUNCTION_PACKAGE = "user_function"
 
 # File used to store input

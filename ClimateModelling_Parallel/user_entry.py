@@ -5,61 +5,13 @@ from analysis import *
 from write_output import *
 from plots import *
 import directories
+from utils import check_valid_order, check_analysis, check_variables_covary, print_end_statement
 
 
 # Booleans set when user gives a just a year (or a year and month)
 class StartBools:
     just_start_year = False
     just_start_year_month = False
-
-
-def check_valid_order(start_date, end_date):
-    """
-    Checks that end date is after start date
-    :param start_date: [day, month, year]
-    :param end_date: [day, month, year]
-    :return: true if end_date is after start date
-    """
-
-    day_s, mon_s, yr_s = start_date[0], start_date[1], start_date[2]
-    day_e, mon_e, yr_e = end_date[0], end_date[1], end_date[2]
-
-    start = date(yr_s, mon_s, day_s)
-    end = date(yr_e, mon_e, day_e)
-
-    return (end - start).days > 0
-
-
-def check_analysis(a):
-    """
-    Check analysis a is valid
-    :param a: list of strings
-    :return: boolesn or throws error
-    """
-
-    # List of analysis that can be selected
-    ans = ['mean', 'rms', 'std', 'median']
-
-    # Check that analysis a is in ans
-    all_elements_contained = all(elem in ans for elem in a)
-
-    if not all_elements_contained:
-        print("ERROR in function check_analysis: Analysis given cannot be selected. "
-              "Ensure that analysis is one or more of [mean, std, rms, median].")
-        sys.exit()
-    return True
-
-
-def check_variables_covary(varbs):
-    """
-    Check only 2 variables given - this function is called if covariance is set
-    :param varbs: list of variables (string)
-    :return: boolean or throws error
-    """
-    if len(varbs) != 2:  # If not 2 variables, then cannot perform covariance
-        print("ERROR in function check_variables_covary: Selecting covariance required two variables.")
-        sys.exit()
-    return True
 
 
 def get_date(date_entry, start=True):
@@ -108,9 +60,14 @@ def get_date(date_entry, start=True):
 
 
 def file_entry(example=False):
-    filename = directories.INPUT_FILE
+    """
+    Get arguments from input or input_example file
+    :param example: set if input_example is used
+    :return: arguments
+    """
+    filename = os.path.join(directories.INPUT, directories.INPUT_FILE)
     if example:
-        filename = directories.INPUT_EXAMPLE_FILE
+        filename = os.path.join(directories.INPUT, directories.INPUT_EXAMPLE_FILE)
 
     # Save arguments
     args = []
@@ -213,7 +170,7 @@ def file_entry(example=False):
             func[0] = func[0].strip()
             func[1] = func[1].strip()
         except Exception:
-            print("ERROR in function file_entry: User function in argument in input file may be missing a comma.")
+            print("ERROR in function file_entry: User function argument in input file may be missing a comma.")
             sys.exit()
 
     return algae_type, start, varbs, ens, end, analysis, total, plot, monthly, grid, sample, mask, output, covary, hist, lb, save_ext, func, calc_areas
@@ -221,12 +178,7 @@ def file_entry(example=False):
 
 def user_entry():
     """
-    Get user input
-        - algae type
-        - start_date
-        - end_date
-        - variables
-        - plot option
+    Get user input from command line or from input file and run full program.
     """
     parser = argparse.ArgumentParser(prog='CLIMATE_ANALYSIS',
                                      formatter_class=argparse.RawTextHelpFormatter,
@@ -516,11 +468,12 @@ def user_entry():
 
     # COMPUTE ANALYSIS
     # user analysis
-    func, user_ens_stats, ens_stats, func_name, analysis_str = None, None, None, None, None
+    func, ens_stats, func_name, analysis_str = None, None, None, None
     if args_dict['func']:
         func = args_dict['func']
         file_name, func_name = func[0], func[1]
-        user_ens_stats = compute_user_analysis(saved, file_name, func_name)
+        analysis_str = func_name
+        ens_stats = compute_user_analysis(saved, file_name, func_name)
     else:
         ens_stats, analysis_str = compute_stats_analysis(saved, args_dict['analysis'], total=args_dict['total'])
 
@@ -545,27 +498,26 @@ def user_entry():
                          save_out=args_dict['save_out'], ens_num=plot_ens_num, cov=args_dict['cov'], mask=args_dict['mask'])
         # Plot time series and boxplot
         if func is not None:
-            create_timeseries(user_ens_stats, args_dict['start'], args_dict['end'], args_dict['varbs'],
+            create_timeseries(ens_stats, args_dict['start'], args_dict['end'], args_dict['varbs'],
                               save_out=args_dict['save_out'], ens_num=plot_ens_num, func_name=func_name)
         else:
             create_timeseries(saved, args_dict['start'], args_dict['end'], args_dict['varbs'],
                               save_out=args_dict['save_out'], ens_num=plot_ens_num, func_name=func_name)
 
     # WRITE ANALYSIS TO NETCDF FILE
-    if func:
-        write_user_analysis_to_netcdf_file(ens_files, abs_files, user_ens_stats, func_name, args_dict['varbs'],
-                                           args_dict['start'], args_dict['end'], args_dict['argv'], test=True)
-    else:
-        write_means_to_netcdf_file(ens_files, abs_files, ens_stats, analysis_str, args_dict['varbs'],
+    write_analysis_to_netcdf_file(ens_files, abs_files, ens_stats, analysis_str, args_dict['varbs'],
                                    args_dict['start'], args_dict['end'], args_dict['argv'], saved, full_saved,
                                    total=args_dict['total'], lon_centre=args_dict['lon_centre'],
                                     mask=args_dict['mask'], lon=args_dict['lon'], lat=args_dict['lat'],
-                                    grid=args_dict['grid'], test=True)
+                                    grid=args_dict['grid'], user_func=func_name, test=True)
 
     print("PROGRAM SUCCESSFUL - TERMINAL FINISHED.")
     # End logging
     sys.stdout = old_stdout
     log_file.close()
+
+    # Print to terminal when finished
+    print_end_statement()
 
     # Show graphs
     plt.show()

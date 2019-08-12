@@ -1,7 +1,10 @@
-from user_entry import get_date, check_valid_order
+import sys
+
+sys.path.append(".")
+
+from user_entry import get_date
 from Months import Month
-from utils import overlaps
-import pytest
+
 """
 Pyrest script for testing functions used for user input
 """
@@ -51,32 +54,3 @@ def test_date_not_valid():
     test_date = "2010-10-43"
     assert not get_date(test_date)
 
-
-def test_valid_order():
-    start = [21, 5, 1988]
-    end = [19, 6, 1990]
-    assert check_valid_order(start, end)
-
-
-def test_invalid_order():
-    start = [21, 5, 2020]
-    end = [19, 6, 1990]
-    assert not check_valid_order(start, end)
-
-
-def test_invalid_order_2():
-    start = [20, 6, 1990]
-    end = [19, 6, 1990]
-    assert not check_valid_order(start, end)
-
-
-def test_no_overlap():
-    x1, x2 = 2005, 2008
-    y1, y2 = 2003, 2004
-    assert overlaps(x1, x2, y1, y2) == False
-
-
-def test_overlap():
-    x1, x2 = 2005, 2008
-    y1, y2 = 2003, 2007
-    assert overlaps(x1, x2, y1, y2) == True

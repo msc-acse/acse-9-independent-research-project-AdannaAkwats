@@ -1,0 +1,35 @@
+# If you want to specify the bin edges used in the histogram, you can add them here.
+# Each variable MUST be defined with the key 'var'
+# The bin edges should then be specified on the line after the variable name
+# The variable that is on the x-axis and y-axis should be defined.
+# An example is given below
+
+# Needed if 2D histogram is plotted (if covary is set in input file)
+x: sal
+y: temp
+
+var: sal
+0.05605654418468475
+0.21510798186063768
+0.3741594195365906
+0.5332108572125436
+0.6922622948884964
+0.8513137325644493
+1.0103651702404024
+1.1694166079163553
+1.3284680455923081
+1.487519483268261
+
+var: temp
+8.588548894294945e-07
+0.10000069548336228
+0.20000053211183513
+0.300000368740308
+0.40000020536878084
+0.5000000419972537
+0.5999998786257266
+0.6999997152541994
+0.7999995518826722
+0.8999993885111451
+
+

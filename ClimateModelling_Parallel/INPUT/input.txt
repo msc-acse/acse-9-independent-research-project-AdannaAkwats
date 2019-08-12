@@ -80,7 +80,6 @@ Calculate areas: True
 # Variables: Variables of data to analyse
 # ------
 # Number of ensembles: The number of ensembles of the data.
-#                      If not set, the default value = 1
 # ------------------------------------------------------------------------------
 # OPTIONAL ARGUMENTS
 # ------------------------------------------------------------------------------

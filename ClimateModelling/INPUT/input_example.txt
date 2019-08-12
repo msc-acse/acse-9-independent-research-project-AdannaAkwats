@@ -50,14 +50,14 @@ Plot: 1
 Monthly: False
 Grid:
 Sample:
-Mask file: mask_example.txt
+Mask file:
 Save Output: True
 Covary: False
-Histogram bin selection: histogram_bins.txt
-Longitude centre: 100
-Save extract data: True
+Histogram bin selection: fd
+Longitude centre: 0
+Save extract data: False
 User function:
-Calculate areas: True
+Calculate areas: False
 #
 #
 # ------------------------------------------------------------------------------
@@ -80,7 +80,6 @@ Calculate areas: True
 # Variables: Variables of data to analyse
 # ------
 # Number of ensembles: The number of ensembles of the data.
-#                      If not set, the default value = 1
 # ------------------------------------------------------------------------------
 # OPTIONAL ARGUMENTS
 # ------------------------------------------------------------------------------

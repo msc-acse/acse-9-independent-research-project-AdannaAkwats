@@ -47,6 +47,7 @@ def get_mask(maskfile, cube_data, lons, lats):
     assert lats is not None
 
     # Get polygons from mask file
+    maskfile = os.path.join(directories.INPUT, maskfile)
     polygons, level = get_polygons(maskfile)
 
     # if only one polygon
@@ -102,6 +103,13 @@ def get_mask(maskfile, cube_data, lons, lats):
 
 
 def calculate_areas(cube, lat_name, lon_name):
+    """
+    Calculate areas of grid boxes of the cube given
+    :param cube: iris.cube
+    :param lat_name: name of latitude coordinate, string
+    :param lon_name: name of longitude cootdinate, string
+    :return: saves the areas in a netcdf file
+    """
     cube.coord(lat_name).guess_bounds()
     cube.coord(lon_name).guess_bounds()
 
@@ -291,7 +299,7 @@ def extract_data(algae_type, variables, start_date, end_date, num_ens, monthly=F
             if lon_centre is not None:
                 # Move longitude centre
                 lon_low = lon_centre - 180
-                lon_high = lon_centre + 180.1
+                lon_high = lon_centre + 180.000000000001
                 lons = iris.analysis.cartography.wrap_lons(lons, lon_low, lon_high - lon_low)
                 count, _ = shift_by_index(lons, lon_centre)
                 lons.sort()
