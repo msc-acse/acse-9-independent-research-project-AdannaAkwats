@@ -521,24 +521,28 @@ def user_entry():
     if plot is not None or save_out:
         plot_ens_num = int(plot[0]) if plot is not None else 1
 
-        # Only plot map of analysis if using analysis: mean, median, std or rms and NOT grid/sample point
-        if args_dict['lat'] is None:
-            if func is None:
-                plot_map(ens_stats, args_dict['varbs'], save_out=args_dict['save_out'], ens_num=plot_ens_num,
-                         analysis_str=analysis_str, total=args_dict['total'])
-            else:
-                print("WARNING: Map not plotted as user function is used.")
         # Plot histogram
         create_histogram(saved, ens_stats, args_dict['start'], args_dict['end'], args_dict['varbs'], sel=args_dict['hist'],
                          save_out=args_dict['save_out'], ens_num=plot_ens_num, cov=args_dict['cov'], mask=args_dict['mask'],
-                         total=args_dict['total'], analysis_str=analysis_str, nan_indices=nan_indices)
-        # Plot time series and boxplot
-        if func is not None:
-            create_timeseries(ens_stats, args_dict['start'], args_dict['end'], args_dict['varbs'],
-                              save_out=args_dict['save_out'], ens_num=plot_ens_num, func_name=func_name)
-        else:
-            create_timeseries(saved, args_dict['start'], args_dict['end'], args_dict['varbs'],
-                              save_out=args_dict['save_out'], ens_num=plot_ens_num, func_name=func_name)
+                         total=args_dict['total'], analysis_str=analysis_str, nan_indices=nan_indices, plot=plot)
+
+        # Only plot timeseries and map if plot is enabled
+        if plot is not None:
+            # Only plot map of analysis if using analysis: mean, median, std or rms and NOT grid/sample point
+            if args_dict['lat'] is None:
+                if func is None:
+                    plot_map(ens_stats, args_dict['varbs'], save_out=args_dict['save_out'], ens_num=plot_ens_num,
+                             analysis_str=analysis_str, total=args_dict['total'])
+                else:
+                    print("WARNING: Map not plotted as user function is used.")
+
+            # Plot time series and boxplot
+            if func is not None:
+                create_timeseries(ens_stats, args_dict['start'], args_dict['end'], args_dict['varbs'],
+                                  save_out=args_dict['save_out'], ens_num=plot_ens_num, func_name=func_name)
+            else:
+                create_timeseries(saved, args_dict['start'], args_dict['end'], args_dict['varbs'],
+                                  save_out=args_dict['save_out'], ens_num=plot_ens_num, func_name=func_name)
 
     # WRITE ANALYSIS TO NETCDF FILE
     write_analysis_to_netcdf_file(ens_files, abs_files, ens_stats, analysis_str, args_dict['varbs'],

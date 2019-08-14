@@ -15,7 +15,7 @@ from collections import defaultdict
 
 
 def create_histogram(list_ens, ens_stats, start_date, end_date, variables, monthly=False, save_out=True, sel='fd', ens_num=1,
-                     cov=False, mask=None, total=False, analysis_str=None, nan_indices=None):
+                     cov=False, mask=None, total=False, analysis_str=None, nan_indices=None, plot=None):
     """
     Plot or save histogram data of cube
     :param list_ens: list of ensemble data
@@ -59,7 +59,7 @@ def create_histogram(list_ens, ens_stats, start_date, end_date, variables, month
     if ens_stats is not None and analysis_str is not None:
         create_analysis_histogram(ens_stats, start_date, end_date, variables, time_str=time_str, save_out=save_out, sel='fd',
                          ens_num=ens_num, cov=cov, mask=mask, total=total, analysis_str=analysis_str, bins_dict=bins_dict,
-                                  x=x, y=y, nan_indices=nan_indices)
+                                  x=x, y=y, nan_indices=nan_indices, plot=plot)
 
     # Get flattened data (without nan values) from cubes
     cubes = []
@@ -85,39 +85,45 @@ def create_histogram(list_ens, ens_stats, start_date, end_date, variables, month
             str(start_date[0]) + " and " + str(end_date[2]) + "-" + str(end_date[1]) + "-" + str(end_date[0]) \
             + " using the E2S2M climate model"
 
-    # Plot histogram
-    sns.set()
-    for i in range(len(variables)):
-        if not cov:
-            fig, ax = plt.subplots()
-            title_name = cubes[i].name() + part_title
-            ax.set_title(title_name)
-            if bins_dict is None:
-                ax.hist(full_datum[i], bins=sel, color="purple")
-            else:
-                ax.hist(full_datum[i], bins=bins_dict[variables[i]], color="purple")
-            ax.set_ylabel("Frequency")
-            ax.set_xlabel(cubes[i].name() + ' (' + str(cubes[i].units) + ')')
+    if plot is not None:
+        # Plot histogram
+        sns.set()
+        for i in range(len(variables)):
+            if not cov:
+                fig, ax = plt.subplots()
+                title_name = cubes[i].name() + part_title
+                ax.set_title(title_name)
+                if bins_dict is None:
+                    ax.hist(full_datum[i], bins=sel, color="purple")
+                else:
+                    ax.hist(full_datum[i], bins=bins_dict[variables[i]], color="purple")
+                ax.set_ylabel("Frequency")
+                ax.set_xlabel(cubes[i].name() + ' (' + str(cubes[i].units) + ')')
 
-    if cov:  # Plot 2D histogram
-        fig, ax = plt.subplots()
-        title_name = cubes[0].name() + " and " + cubes[1].name() + part_title
-        ax.set_title(title_name)
-        _, _, _, img = ax.hist2d(full_datum[0], full_datum[1], bins=[bins_dict[x], bins_dict[y]])
-        ax.set_xlabel(cubes[0].name() + ' (' + str(cubes[0].units) + ')')
-        ax.set_ylabel(cubes[1].name() + ' (' + str(cubes[1].units) + ')')
-        plt.colorbar(img, ax=ax, label='Frequency')
+                f = "hist_" + cubes[i].name() + part_name
+                f = make_into_file_name(f)
+                plt.savefig(os.path.join(directories.ANALYSIS, f))
+
+        if cov:  # Plot 2D histogram
+            fig, ax = plt.subplots()
+            title_name = cubes[0].name() + " and " + cubes[1].name() + part_title
+            ax.set_title(title_name)
+            _, _, _, img = ax.hist2d(full_datum[0], full_datum[1], bins=[bins_dict[x], bins_dict[y]])
+            ax.set_xlabel(cubes[0].name() + ' (' + str(cubes[0].units) + ')')
+            ax.set_ylabel(cubes[1].name() + ' (' + str(cubes[1].units) + ')')
+            plt.colorbar(img, ax=ax, label='Frequency')
+
+            f = "hist2D_" + cubes[0].name() + "_" + cubes[1].name() + part_name
+            f = make_into_file_name(f)
+            plt.savefig(os.path.join(directories.ANALYSIS, f))
 
     if save_out:
         # Construct file name
         part_name = " " + time_str + " " + str(start_date[2]) + "_" + str(end_date[2])
-
         for i in range(len(variables)):
             if not cov:
                 title_name = "hist_" + cubes[i].name() + part_name
-                title_name = make_into_file_name(title_name)
-                plt.savefig(os.path.join(directories.ANALYSIS, title_name))
-                title_name = title_name + '.txt'
+                title_name = make_into_file_name(title_name) + '.txt'
                 file = open(os.path.join(directories.ANALYSIS, title_name), 'w')
                 # Write header of file
                 file.write("# " + cubes[i].name() + "," + "Frequency\n")
@@ -131,9 +137,7 @@ def create_histogram(list_ens, ens_stats, start_date, end_date, variables, month
                 file.close()
         if cov:
             title_name = "hist2D_" + cubes[0].name() + "_" + cubes[1].name() + part_name
-            title_name = make_into_file_name(title_name)
-            plt.savefig(os.path.join(directories.ANALYSIS, title_name))
-            title_name = title_name + '.txt'
+            title_name = make_into_file_name(title_name) + '.txt'
             file = open(os.path.join(directories.ANALYSIS, title_name), 'w')
             file.write("# " + cubes[0].name() + "," + cubes[1].name() + "," + "Frequency\n")
             if bins_dict is None:
@@ -153,7 +157,7 @@ def create_histogram(list_ens, ens_stats, start_date, end_date, variables, month
 
 def create_analysis_histogram(list_ens, start_date, end_date, variables, time_str=False, save_out=True, sel='fd',
                      ens_num=1, cov=False, mask=None, total=False, analysis_str=None, bins_dict=None,
-                                  x=None, y=None, nan_indices=None):
+                                  x=None, y=None, nan_indices=None, plot=None):
     """
     Plot or save histogram data of cube
     :param list_ens: list of analysed ensemble data
@@ -202,42 +206,48 @@ def create_analysis_histogram(list_ens, start_date, end_date, variables, time_st
     # Construct file name
     part_name = " " + time_str + " " + str(start_date[2]) + "_" + str(end_date[2])
 
+
     # Plot histograms of each analysis
     for a in range(len(analysis_str)):
         file_names = defaultdict(list)
-        # Plot histogram
-        sns.set()
-        for i in range(len(variables)):
-            if not cov:
+        if plot is not None:
+            # Plot histogram
+            sns.set()
+            for i in range(len(variables)):
+                if not cov:
+                    fig, ax = plt.subplots()
+                    title_name = analysis_str[a] + " of " + cubes[a][i].name() + part_title
+                    ax.set_title(title_name)
+                    if bins_dict is None:
+                        ax.hist(full_datum[a][i], bins=sel, color="purple")
+                    else:
+                        ax.hist(full_datum[a][i], bins=bins_dict[variables[i]], color="purple")
+                    ax.set_ylabel("Frequency")
+                    ax.set_xlabel(cubes[a][i].name() + ' (' + str(cubes[a][i].units) + ')')
+
+                    # Get file name
+                    file_name = "hist_" + analysis_str[a] + "_" + cubes[a][i].name() + part_name
+                    file_name = make_into_file_name(file_name)
+                    plt.savefig(os.path.join(directories.ANALYSIS, file_name))
+                    file_name = file_name + '.txt'
+                    file_names[a].append(file_name)
+
+            if cov:  # Plot 2D histogram
                 fig, ax = plt.subplots()
-                title_name = analysis_str[a] + " of " + cubes[a][i].name() + part_title
+                title_name = analysis_str[a] + " of " + cubes[a][0].name() + " and " + cubes[a][1].name() + part_title
                 ax.set_title(title_name)
-                if bins_dict is None:
-                    ax.hist(full_datum[a][i], bins=sel, color="purple")
-                else:
-                    ax.hist(full_datum[a][i], bins=bins_dict[variables[i]], color="purple")
-                ax.set_ylabel("Frequency")
-                ax.set_xlabel(cubes[a][i].name() + ' (' + str(cubes[a][i].units) + ')')
-
-                # Get file name
-                file_name = "hist_" + analysis_str[a] + "_" + cubes[a][i].name() + part_name
-                file_name = make_into_file_name(file_name)
-                plt.savefig(os.path.join(directories.ANALYSIS, file_name))
-                file_name = file_name + '.txt'
-                file_names[a].append(file_name)
-
-        if cov:  # Plot 2D histogram
-            fig, ax = plt.subplots()
-            title_name = analysis_str[a] + " of " + cubes[a][0].name() + " and " + cubes[a][1].name() + part_title
-            ax.set_title(title_name)
-            _, _, _, img = ax.hist2d(full_datum[a][0], full_datum[a][1], bins=[bins_dict[x], bins_dict[y]])
-            ax.set_xlabel(cubes[a][0].name() + ' (' + str(cubes[a][0].units) + ')')
-            ax.set_ylabel(cubes[a][1].name() + ' (' + str(cubes[a][1].units) + ')')
-            plt.colorbar(img, ax=ax, label='Frequency')
+                _, _, _, img = ax.hist2d(full_datum[a][0], full_datum[a][1], bins=[bins_dict[x], bins_dict[y]])
+                ax.set_xlabel(cubes[a][0].name() + ' (' + str(cubes[a][0].units) + ')')
+                ax.set_ylabel(cubes[a][1].name() + ' (' + str(cubes[a][1].units) + ')')
+                plt.colorbar(img, ax=ax, label='Frequency')
 
         if save_out:
             for i in range(len(variables)):
                 if not cov:
+                    if plot is None:
+                        file_name = "hist_" + analysis_str[a] + "_" + cubes[a][i].name() + part_name
+                        file_name = make_into_file_name(file_name) + '.txt'
+                        file_names[a].append(file_name)
                     file = open(os.path.join(directories.ANALYSIS, file_names[a][i]), 'w')
                     # Write header of file
                     file.write("# " + cubes[a][i].name() + "," + "Frequency\n")

@@ -3,7 +3,6 @@ from utils import *
 from netCDF4 import Dataset, MFDataset
 import pickle
 import xarray as xr
-from nco import Nco
 
 
 def write_analysis_to_netcdf_file(ens_files, abs_files, ens_means, analysis_str, variables, start_date, end_date, argv,
