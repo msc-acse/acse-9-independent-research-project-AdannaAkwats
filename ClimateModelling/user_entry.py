@@ -118,6 +118,11 @@ def file_entry(example=False):
     func = args[17]
     calc_areas = args[18]
 
+    # Make sure ens > 0
+    if ens < 1:
+        print("ERROR in function file_entry: Number of ensembles should be > 0.")
+        sys.exit()
+
     # Check for analysis
     if analysis:
         analysis = analysis.split(',')
@@ -172,6 +177,37 @@ def file_entry(example=False):
         except Exception:
             print("ERROR in function file_entry: User function argument in input file may be missing a comma.")
             sys.exit()
+
+    # Check total, if ensemble is just one, then turn it off
+    if ens == 1 and total:
+        total = False
+
+    # Check boolean options
+    # total, monthly, output, covary, save_ext, calc_areas
+    if not isinstance(total, bool):
+        print("ERROR in function file_entry: Total ensemble stats argument in input file is invalid. "
+              "It must be set to True/False or left empty (False).")
+        sys.exit()
+    if not isinstance(monthly, bool):
+        print("ERROR in function file_entry: Monthly argument in input file is invalid. "
+              "It must be set to True/False or left empty (False).")
+        sys.exit()
+    if not isinstance(output, bool):
+        print("ERROR in function file_entry: Save Output argument in input file is invalid. "
+              "It must be set to True/False or left empty (False).")
+        sys.exit()
+    if not isinstance(covary, bool):
+        print("ERROR in function file_entry: Covary argument in input file is invalid. "
+              "It must be set to True/False or left empty (False).")
+        sys.exit()
+    if not isinstance(save_ext, bool):
+        print("ERROR in function file_entry: Save extract data argument in input file is invalid. "
+              "It must be set to True/False or left empty (False).")
+        sys.exit()
+    if not isinstance(calc_areas, bool):
+        print("ERROR in function file_entry: Calculate areas argument in input file is invalid. "
+              "It must be set to True/False or left empty (False).")
+        sys.exit()
 
     return algae_type, start, varbs, ens, end, analysis, total, plot, monthly, grid, sample, mask, output, covary, hist, lb, save_ext, func, calc_areas
 
@@ -468,23 +504,22 @@ def user_entry():
 
     # COMPUTE ANALYSIS
     # user analysis
-    func, ens_stats, func_name, analysis_str = None, None, None, None
+    func, ens_stats, func_name, analysis_str, nan_indices = None, None, None, None, None
     if args_dict['func']:
         func = args_dict['func']
         file_name, func_name = func[0], func[1]
-        analysis_str = func_name
         ens_stats = compute_user_analysis(saved, file_name, func_name)
     else:
-        ens_stats, analysis_str = compute_stats_analysis(saved, args_dict['analysis'], total=args_dict['total'])
+        ens_stats, analysis_str, nan_indices = compute_stats_analysis(saved, args_dict['analysis'], total=args_dict['total'])
 
     # Warning for mask and sample/grid
     if args_dict['mask'] is not None and args_dict['lat'] is not None:
         print("WARNING: Please ensure that sample/grid point is in the masked region.")
 
     # PLOTTING
-    plot = args_dict['plot']
-    if plot is not None:
-        plot_ens_num = int(plot[0])
+    plot, save_out = args_dict['plot'], args_dict['save_out']
+    if plot is not None or save_out:
+        plot_ens_num = int(plot[0]) if plot is not None else 1
 
         # Only plot map of analysis if using analysis: mean, median, std or rms and NOT grid/sample point
         if args_dict['lat'] is None:
@@ -494,8 +529,9 @@ def user_entry():
             else:
                 print("WARNING: Map not plotted as user function is used.")
         # Plot histogram
-        create_histogram(saved, args_dict['start'], args_dict['end'], args_dict['varbs'], sel=args_dict['hist'],
-                         save_out=args_dict['save_out'], ens_num=plot_ens_num, cov=args_dict['cov'], mask=args_dict['mask'])
+        create_histogram(saved, ens_stats, args_dict['start'], args_dict['end'], args_dict['varbs'], sel=args_dict['hist'],
+                         save_out=args_dict['save_out'], ens_num=plot_ens_num, cov=args_dict['cov'], mask=args_dict['mask'],
+                         total=args_dict['total'], analysis_str=analysis_str, nan_indices=nan_indices)
         # Plot time series and boxplot
         if func is not None:
             create_timeseries(ens_stats, args_dict['start'], args_dict['end'], args_dict['varbs'],
@@ -520,7 +556,8 @@ def user_entry():
     print_end_statement()
 
     # Show graphs
-    plt.show()
+    if plot is not None:
+        plt.show()
 
     # compute_enso_indices()
 

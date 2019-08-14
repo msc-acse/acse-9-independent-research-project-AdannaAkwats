@@ -19,6 +19,8 @@ from shapely.geometry import Polygon, Point
 from multiprocessing import Pool
 from functools import partial
 import parallel_settings
+warnings.filterwarnings("ignore")
+
 
 
 def contains_points(polygon, xp, yp):

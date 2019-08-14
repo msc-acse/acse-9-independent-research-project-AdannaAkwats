@@ -16,6 +16,7 @@ from functools import reduce
 import operator
 import math
 from shapely.geometry import Polygon, Point
+warnings.filterwarnings("ignore")
 
 
 def contains_points(polygon, xp, yp):
