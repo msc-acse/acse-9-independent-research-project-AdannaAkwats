@@ -40,16 +40,15 @@ def compute_stats_analysis(list_ens, analysis, total=False):
             for a in analysis:
                 if a == 'mean':
                     mean_calc = dict_[d].collapsed(time_name, iris.analysis.MEAN)
-                    if total:
-                        if not indices_filled:
-                            for s in dict_[d].slices_over('time'):
-                                if np.ma.is_masked(s.data):
-                                    x = s.data.filled()
-                                    nan_indices = np.argwhere(np.isclose(x.flatten().data, s.data.fill_value))
-                                else:
-                                    nan_indices = np.argwhere(np.isnan(s.data.flatten().data))
-                                break
-                            indices_filled = True
+                    if not indices_filled:
+                        for s in dict_[d].slices_over('time'):
+                            if np.ma.is_masked(s.data):
+                                x = s.data.filled()
+                                nan_indices = np.argwhere(np.isclose(x.flatten().data, s.data.fill_value))
+                            else:
+                                nan_indices = np.argwhere(np.isnan(s.data.flatten().data))
+                            break
+                        indices_filled = True
                     mean_calcs[d] = mean_calc
                 if a == 'std':
                     std_calc = dict_[d].collapsed(time_name, iris.analysis.STD_DEV)
@@ -109,7 +108,7 @@ def compute_stats_analysis(list_ens, analysis, total=False):
 
     print("function compute_stats_analysis: Averages of data successfully computed.")
 
-    return ens_calcs, analysis
+    return ens_calcs, analysis, nan_indices
 
 
 def compute_enso_indices():

@@ -126,7 +126,7 @@ def compute_stats_analysis(list_ens, analysis, total=False):
 
     print("function compute_stats_analysis: Averages of data successfully computed.")
 
-    return ens_calcs, analysis
+    return ens_calcs, analysis, nan_indices
 
 
 def compute_enso_indices():
