@@ -1,4 +1,3 @@
-from nco import Nco
 import time
 from utils import *
 from netCDF4 import Dataset, MFDataset
