@@ -1,1 +1,0 @@
-Default folder where results are stored
