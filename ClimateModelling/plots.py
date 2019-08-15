@@ -56,10 +56,14 @@ def create_histogram(list_ens, ens_stats, start_date, end_date, variables, month
         sys.exit()
 
     # Plot histogram of analysis performed
-    if ens_stats is not None and analysis_str is not None:
+    if ens_stats is not None and analysis_str:
         create_analysis_histogram(ens_stats, start_date, end_date, variables, time_str=time_str, save_out=save_out, sel='fd',
                          ens_num=ens_num, cov=cov, mask=mask, total=total, analysis_str=analysis_str, bins_dict=bins_dict,
                                   x=x, y=y, nan_indices=nan_indices, plot=plot)
+
+    # If total and not analysis
+    if total and not analysis_str:
+        list_ens, ens_num = ens_stats, 1
 
     # Get flattened data (without nan values) from cubes
     cubes = []
@@ -84,6 +88,9 @@ def create_histogram(list_ens, ens_stats, start_date, end_date, variables, month
     part_title = " measured " + time_str + " between " + str(start_date[2]) + "-" + str(start_date[1]) + "-" + \
             str(start_date[0]) + " and " + str(end_date[2]) + "-" + str(end_date[1]) + "-" + str(end_date[0]) \
             + " using the E2S2M climate model"
+
+    # Construct file name
+    part_name = " " + time_str + " " + str(start_date[2]) + "_" + str(end_date[2])
 
     if plot is not None:
         # Plot histogram
@@ -118,8 +125,6 @@ def create_histogram(list_ens, ens_stats, start_date, end_date, variables, month
             plt.savefig(os.path.join(directories.ANALYSIS, f))
 
     if save_out:
-        # Construct file name
-        part_name = " " + time_str + " " + str(start_date[2]) + "_" + str(end_date[2])
         for i in range(len(variables)):
             if not cov:
                 title_name = "hist_" + cubes[i].name() + part_name
@@ -180,7 +185,6 @@ def create_analysis_histogram(list_ens, start_date, end_date, variables, time_st
     # Make sure data structures are not empty
     assert list_ens is not None
     assert variables is not None
-    assert analysis_str is not None
 
     # Get flattened data (without nan values) from cubes
     cubes, full_datum = defaultdict(list), defaultdict(list)

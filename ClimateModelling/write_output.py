@@ -52,6 +52,9 @@ def write_analysis_to_netcdf_file(ens_files, abs_files, ens_means, analysis_str,
     if test:
         mean_folder = mean_folder.replace("Adanna Akwataghibe", "Adanna")
 
+    if not analysis_str:
+        ens_means = ens_files
+
     # Go through ensembles, merge files to get output and write to output
     for i in range(len(ens_means)):
         # Get first file name in specific ensemble and add last year to name - use as output file name
@@ -140,7 +143,7 @@ def write_analysis_to_netcdf_file(ens_files, abs_files, ens_means, analysis_str,
                 # Append analysis to file
                 converted.to_netcdf(output_file, mode='a')
 
-            else:
+            elif analysis_str:
                 # Save all analysis to file
                 for a in range(len(analysis_str)):
                     # Save analysis grid to file
@@ -168,6 +171,8 @@ def write_analysis_to_netcdf_file(ens_files, abs_files, ens_means, analysis_str,
 
         # Global attributes
         dest = Dataset(output_file, 'a')
+        if not analysis_str:
+            analysis_str = ['analysis']
         as_ = ', '.join(analysis_str)
         if user_func:
             as_ = user_func
@@ -218,6 +223,10 @@ def write_analysis_to_netcdf_file(ens_files, abs_files, ens_means, analysis_str,
                     dest.source = dest_val
         dest.close()
 
+        # If no analysis, set back to false for next ensemble
+        if analysis_str == ['analysis']:
+            analysis_str = False
+
     print("Ensemble files created in " + os.path.join(directories.ANALYSIS, directories.MEANS) + " folder.")
 
 
@@ -264,7 +273,7 @@ def write_total(ens_files, abs_files, ens_means, analysis_str, variables, start_
 
     ens_members = []
 
-    for i in range(len(ens_means)):
+    for i in range(len(ens_files)):
         if ens_files[i][0].endswith(".nc"):
             # Combine each ensemble file into one
             times_append = xr.open_mfdataset(abs_files[i])
@@ -322,7 +331,7 @@ def write_total(ens_files, abs_files, ens_means, analysis_str, variables, start_
     for var in variables:
         # Save original grid to file (or masked/lon centre)
         ens_arrays = []
-        for i in range(len(ens_means)):
+        for i in range(len(ens_files)):
             cube = saved[i][var]
             ens_arrays.append(xr.DataArray.from_iris(cube))
         xr_saved = xr.concat(ens_arrays, 'ensemble_member')
@@ -333,34 +342,56 @@ def write_total(ens_files, abs_files, ens_means, analysis_str, variables, start_
         except Exception:
             xr_saved.to_netcdf(output_file, mode='w')
 
-        # Save all analysis to file
-        for a in range(len(analysis_str)):
-            # Save analysis grid to file
-            cube = ens_means[a][var]
-            # Rename to original names
-            coord = cube.coord("longitude")
-            coord.rename(lon_name)
-            coord = cube.coord("latitude")
-            coord.rename(lat_name)
-            coord = cube.coord("time")
-            coord.rename(time_name)
-            # Convert to xarray
-            converted = xr.DataArray.from_iris(cube)
-            # Add analysis name to variable
-            new_name = converted.name + '_' + analysis_str[a]
-            converted = converted.rename(new_name)
-            # Add new long name of file
-            try:
-                new_long_name = converted.attrs['long_name'] + ' averaged between ' + start_end_str
-            except KeyError:
-                new_long_name = var + ' averaged between ' + start_end_str
-            converted.attrs['long_name'] = new_long_name
-            # Append analysis to file
-            converted.to_netcdf(output_file, mode='a')
+        # If no analysis
+        if not analysis_str:
+            for var in variables:
+                # Save original grid to file
+                cube_saved = ens_means[0][var]
+                # Replace to original names
+                coord = cube_saved.coord("longitude")
+                coord.rename(lon_name)
+                coord = cube_saved.coord("latitude")
+                coord.rename(lat_name)
+                coord = cube_saved.coord("time")
+                coord.rename(time_name)
+                # Convert cube to xarray
+                converted_saved = xr.DataArray.from_iris(cube_saved)
+                try:
+                    converted_saved.to_netcdf(output_file, mode='a')
+                except Exception:
+                    converted_saved.to_netcdf(output_file, mode='w')
+
+        else:
+            # Save all analysis to file
+            for a in range(len(analysis_str)):
+                # Save analysis grid to file
+                cube = ens_means[a][var]
+                # Rename to original names
+                coord = cube.coord("longitude")
+                coord.rename(lon_name)
+                coord = cube.coord("latitude")
+                coord.rename(lat_name)
+                coord = cube.coord("time")
+                coord.rename(time_name)
+                # Convert to xarray
+                converted = xr.DataArray.from_iris(cube)
+                # Add analysis name to variable
+                new_name = converted.name + '_' + analysis_str[a]
+                converted = converted.rename(new_name)
+                # Add new long name of file
+                try:
+                    new_long_name = converted.attrs['long_name'] + ' averaged between ' + start_end_str
+                except KeyError:
+                    new_long_name = var + ' averaged between ' + start_end_str
+                converted.attrs['long_name'] = new_long_name
+                # Append analysis to file
+                converted.to_netcdf(output_file, mode='a')
 
     # Global attributes
     dest = Dataset(output_file, 'a')
     # Write to description and history of file
+    if not analysis_str:
+        analysis_str = ['analysis']
     as_ = ', '.join(analysis_str)
     desc_str = "Added " + as_ + " of variables " + ', '.join(variables) + " within time period " + \
                start_end_str
@@ -402,6 +433,8 @@ def write_total(ens_files, abs_files, ens_means, analysis_str, variables, start_
             elif dest_key == 'source':
                 dest.source = dest_val
     dest.close()
+
+
 
 
 def save_extract_data_to_file(list_ens, full_list_ens, ens_files, abs_files, args_dict):
