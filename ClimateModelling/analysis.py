@@ -3,6 +3,7 @@ import importlib
 import directories
 import numpy as np
 from cdo import Cdo
+import xarray as xr
 
 
 def compute_stats_analysis(list_ens, analysis, total=False):
@@ -20,11 +21,52 @@ def compute_stats_analysis(list_ens, analysis, total=False):
     # Assertions
     assert list_ens is not None
 
-    analysis = [a.lower() for a in analysis]
-
-    variables = []
-
     nan_indices, indices_filled = None, False
+
+    if analysis:
+        analysis = [a.lower() for a in analysis]
+    elif total and not analysis:
+        # Get variables from one ensemble
+        variables = list(list_ens[0])
+        # Save averages
+        ens_calcs, dict_vars = [], {}
+        for var in variables:
+            unit = list_ens[0][var].units
+            long_name = list_ens[0][var].long_name
+            # convert cubes to xarray
+            xr_var = [xr.DataArray.from_iris(ens[var]) for ens in list_ens]
+            # Combine the dataarrays
+            mg = xr.concat(xr_var, 'ensemble_member')
+            # Find average across ensembles
+            av_mg = mg.mean(dim='ensemble_member', skipna=True)
+            # Convert back to cube
+            cube = xr.DataArray.to_iris(av_mg)
+            cube.units = unit
+            cube.long_name = long_name
+
+            dict_vars[var] = cube
+            # Get nan indices
+            if not indices_filled:
+                if np.ma.is_masked(cube.data):
+                    x = cube.data.filled()
+                    nan_indices = np.argwhere(np.isclose(x.flatten().data, cube.data.fill_value))
+                else:
+                    nan_indices = np.argwhere(np.isnan(cube.data.flatten().data))
+                break
+                indices_filled = True
+        ens_calcs.append(dict_vars)
+        return ens_calcs, False, nan_indices
+    elif not total and not analysis:
+        return None, False, None
+
+    # Rearrange analysis in this order
+    a_order = ['mean', 'std', 'median', 'rms']
+    analysis_new_order = []
+    for o in a_order:
+        if o in analysis:
+            analysis_new_order.append(o)
+
+    analysis = analysis_new_order
 
     time_name = 'time'
     # Holds the means for each ensemble
@@ -36,19 +78,19 @@ def compute_stats_analysis(list_ens, analysis, total=False):
         mean_calcs, std_calcs, median_calcs, rms_calcs = {}, {}, {}, {}
         # Calculate the mean of each variable in the dictionary given
         for d in dict_:
-            variables.append(d)
             for a in analysis:
+                # Get nan indices
+                if not indices_filled:
+                    for s in dict_[d].slices_over('time'):
+                        if np.ma.is_masked(s.data):
+                            x = s.data.filled()
+                            nan_indices = np.argwhere(np.isclose(x.flatten().data, s.data.fill_value))
+                        else:
+                            nan_indices = np.argwhere(np.isnan(s.data.flatten().data))
+                        break
+                    indices_filled = True
                 if a == 'mean':
                     mean_calc = dict_[d].collapsed(time_name, iris.analysis.MEAN)
-                    if not indices_filled:
-                        for s in dict_[d].slices_over('time'):
-                            if np.ma.is_masked(s.data):
-                                x = s.data.filled()
-                                nan_indices = np.argwhere(np.isclose(x.flatten().data, s.data.fill_value))
-                            else:
-                                nan_indices = np.argwhere(np.isnan(s.data.flatten().data))
-                            break
-                        indices_filled = True
                     mean_calcs[d] = mean_calc
                 if a == 'std':
                     std_calc = dict_[d].collapsed(time_name, iris.analysis.STD_DEV)
@@ -73,6 +115,8 @@ def compute_stats_analysis(list_ens, analysis, total=False):
     # Find ensembles average
     if total:
         mean_calcs, rms_calcs, median_calcs, std_calcs = {}, {}, {}, {}
+        # Get variables from one ensemble
+        variables = list(list_ens[0])
         for j in range(len(analysis)):
             for v in variables:
                 each_a = [t[j][v] for t in ens_calcs]

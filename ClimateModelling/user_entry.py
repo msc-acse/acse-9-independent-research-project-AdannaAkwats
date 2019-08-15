@@ -401,9 +401,6 @@ def user_entry():
             a_ = ' '.join(analysis)
             argv = argv + ' -a ' + a_
             check_analysis(analysis)
-        else:
-            print("Analysis: ", analysis)
-            analysis = ['mean']
         if total:
             print("Total ensemble stats option selected.")
             argv = argv + ' -t'
@@ -529,12 +526,14 @@ def user_entry():
         # Only plot timeseries and map if plot is enabled
         if plot is not None:
             # Only plot map of analysis if using analysis: mean, median, std or rms and NOT grid/sample point
-            if args_dict['lat'] is None:
+            if args_dict['lat'] is None and analysis_str:
                 if func is None:
                     plot_map(ens_stats, args_dict['varbs'], save_out=args_dict['save_out'], ens_num=plot_ens_num,
                              analysis_str=analysis_str, total=args_dict['total'])
                 else:
                     print("WARNING: Map not plotted as user function is used.")
+            else:
+                print("WARNING: Map not plotted since data is not 2D.")
 
             # Plot time series and boxplot
             if func is not None:
