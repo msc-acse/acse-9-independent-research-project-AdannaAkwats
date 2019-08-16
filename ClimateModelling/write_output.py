@@ -7,7 +7,7 @@ import xarray as xr
 
 def write_analysis_to_netcdf_file(ens_files, abs_files, ens_means, analysis_str, variables, start_date, end_date, argv,
                                saved, full_saved, total=False, lon_centre=None, mask=None, lon=None, lat=None,
-                                grid=None, user_func=False, test=False):
+                                grid=None, user_func=False, points_sample_grid=None, test=False):
     """
     Write analysis computed in netcdf files
     :param ens_files: initial files arranged in ensemble order
@@ -27,6 +27,7 @@ def write_analysis_to_netcdf_file(ens_files, abs_files, ens_means, analysis_str,
     :param lat: latitude, set if grid or sample point, floats
     :param grid: set if grid point is given
     :param user_func: user function name
+    :param points_sample_grid: file (txt or nc) that contains sample or grid points
     :param test: if test is true, make some changes specific to files on my pc
     :return: None, files created in folder analysis/ensemble_means
     """
@@ -40,7 +41,7 @@ def write_analysis_to_netcdf_file(ens_files, abs_files, ens_means, analysis_str,
     if total:
         return write_total(ens_files, abs_files, ens_means, analysis_str, variables, start_date, end_date, argv,
                                saved, full_saved, lon_centre=lon_centre, mask=mask, lon=lon, lat=lat,
-                                grid=grid, test=test)
+                                grid=grid, points_sample_grid=None, test=test)
 
     # Start and end date string
     start_end_str = str(start_date[2]) + "-" + str(start_date[1]) + "-" + str(start_date[0]) + " and " + \
@@ -48,9 +49,7 @@ def write_analysis_to_netcdf_file(ens_files, abs_files, ens_means, analysis_str,
 
     # Get folder to store ensemble means
     results = directories.ANALYSIS
-    mean_folder = os.path.abspath(os.path.join(results, directories.MEANS))
-    if test:
-        mean_folder = mean_folder.replace("Adanna Akwataghibe", "Adanna")
+    mean_folder = os.path.join(results, directories.MEANS)
 
     if not analysis_str:
         ens_means = ens_files
@@ -77,14 +76,22 @@ def write_analysis_to_netcdf_file(ens_files, abs_files, ens_means, analysis_str,
         if mask is not None:  # Add masked to the name
             output_file = output_file[:-3] + '_masked' + '.nc'
 
-        sample = False
+        sample, nc_true, txt_true = False, False, False
         if lat and lon and not grid:
+            sample = True
+        if points_sample_grid is not None and not grid:
             sample = True
 
         if sample:
-            output_file = output_file[:-3] + '_s_' + str(lat) + '_' + str(lon) + '.nc'
+            if points_sample_grid is not None:
+                output_file = output_file[:-3] + '_s_' + 'regrid' + '.nc'
+            else:
+                output_file = output_file[:-3] + '_s_' + str(lat) + '_' + str(lon) + '.nc'
         elif grid:
-            output_file = output_file[:-3] + '_g_' + str(lat) + '_' + str(lon) + '.nc'
+            if points_sample_grid is not None:
+                output_file = output_file[:-3] + '_g_' + 'regrid' + '.nc'
+            else:
+                output_file = output_file[:-3] + '_g_' + str(lat) + '_' + str(lon) + '.nc'
 
         # Combine each ensemble file into one
         times_append = xr.open_mfdataset(abs_files[i])
@@ -97,12 +104,14 @@ def write_analysis_to_netcdf_file(ens_files, abs_files, ens_means, analysis_str,
         list_dim_names = list(times_append.dims.keys())
         time_name, lat_name, lon_name = None, None, None
         for dd in list_dim_names:
-            if dd.lower() == 't' or 'time' in dd.lower():
-                time_name = dd
-            elif dd[0].lower() == 'y' or 'lat' in dd.lower() or 'latitude' in dd.lower():
-                lat_name = dd
-            elif dd[0].lower() == 'x' or 'lon' in dd.lower() or 'longitude' in dd.lower():
-                lon_name = dd
+            not_bnds = 'bound' not in dd and 'bnd' not in dd
+            if not_bnds:
+                if dd.lower() == 't' or dd.lower() == 'time':
+                    time_name = dd
+                elif dd[0].lower() == 'y' or 'lat' in dd.lower() or 'latitude' in dd.lower():
+                    lat_name = dd
+                elif dd[0].lower() == 'x' or 'lon' in dd.lower() or 'longitude' in dd.lower():
+                    lon_name = dd
 
         # If sample/ grid point , get original grid
         if full_saved is not None:
@@ -167,7 +176,10 @@ def write_analysis_to_netcdf_file(ens_files, abs_files, ens_means, analysis_str,
                         new_long_name = var + ' averaged between ' + start_end_str
                     converted.attrs['long_name'] = new_long_name
                     # Append analysis to file
-                    converted.to_netcdf(output_file, mode='a')
+                    try:
+                        converted.to_netcdf(output_file, mode='a')
+                    except Exception:
+                        converted.to_netcdf(output_file, mode='w')
 
         # Global attributes
         dest = Dataset(output_file, 'a')
@@ -186,6 +198,10 @@ def write_analysis_to_netcdf_file(ens_files, abs_files, ens_means, analysis_str,
         elif sample:
             desc_str = "Added " + as_ + " of variables " + ', '.join(
                 variables) + " using sample point (" + str(lat) + "," + str(lon) + ")" + " within time period " + \
+                       start_end_str
+        if points_sample_grid is not None:
+            desc_str = "Added " + as_ + " of variables " + ', '.join(
+                variables) + " regridded using points in " + points_sample_grid + " within time period " + \
                        start_end_str
         hist_str = time.ctime(time.time()) + ': Commands used to produce file: ' + argv + ' \n ' + \
                            time.ctime(time.time()) + ': Functions used:  extract_data, compute_stats_analysis,' \
@@ -232,7 +248,7 @@ def write_analysis_to_netcdf_file(ens_files, abs_files, ens_means, analysis_str,
 
 def write_total(ens_files, abs_files, ens_means, analysis_str, variables, start_date, end_date, argv,
                                saved, full_saved, lon_centre=None, mask=None, lon=None, lat=None,
-                                grid=None, test=False):
+                                grid=None, points_sample_grid=None, test=False):
     """
     Write analysis computed in netcdf files if ensembles calculated together
     :param ens_files: initial files arranged in ensemble order
@@ -251,6 +267,7 @@ def write_total(ens_files, abs_files, ens_means, analysis_str, variables, start_
     :param lon: longitude, set if grid or sample point, floats
     :param lat: latitude, set if grid or sample point, floats
     :param grid: set if grid point is given
+    :param points_sample_grid: file (txt or nc) that contains sample or grid points
     :param test: if test is true, make some changes specific to files on my pc
     :return: None, files created in folder analysis/ensemble_means
     """
@@ -267,9 +284,7 @@ def write_total(ens_files, abs_files, ens_means, analysis_str, variables, start_
 
     # Get folder to store ensemble means
     results = directories.ANALYSIS
-    mean_folder = os.path.abspath(os.path.join(results, directories.MEANS))
-    if test:
-        mean_folder = mean_folder.replace("Adanna Akwataghibe", "Adanna")
+    mean_folder = os.path.join(results, directories.MEANS)
 
     ens_members = []
 
@@ -299,11 +314,19 @@ def write_total(ens_files, abs_files, ens_means, analysis_str, variables, start_
     sample = False
     if lat and lon and not grid:
         sample = True
+    if points_sample_grid is not None and not grid:
+        sample = True
 
     if sample:
-        output_file = output_file[:-3] + '_s_' + str(lat) + '_' + str(lon) + '.nc'
+        if points_sample_grid is not None:
+            output_file = output_file[:-3] + '_s_' + 'regrid' + '.nc'
+        else:
+            output_file = output_file[:-3] + '_s_' + str(lat) + '_' + str(lon) + '.nc'
     elif grid:
-        output_file = output_file[:-3] + '_g_' + str(lat) + '_' + str(lon) + '.nc'
+        if points_sample_grid is not None:
+            output_file = output_file[:-3] + '_g_' + 'regrid' + '.nc'
+        else:
+            output_file = output_file[:-3] + '_g_' + str(lat) + '_' + str(lon) + '.nc'
 
     appended.to_netcdf(output_file)
 
@@ -314,12 +337,14 @@ def write_total(ens_files, abs_files, ens_means, analysis_str, variables, start_
     list_dim_names = list(appended.dims.keys())
     time_name, lat_name, lon_name = None, None, None
     for dd in list_dim_names:
-        if dd.lower() == 't' or 'time' in dd.lower():
-            time_name = dd
-        elif dd[0].lower() == 'y' or 'lat' in dd.lower() or 'latitude' in dd.lower():
-            lat_name = dd
-        elif dd[0].lower() == 'x' or 'lon' in dd.lower() or 'longitude' in dd.lower():
-            lon_name = dd
+        not_bnds = 'bound' not in dd and 'bnd' not in dd
+        if not_bnds:
+            if dd.lower() == 't' or dd.lower() == 'time':
+                time_name = dd
+            elif dd[0].lower() == 'y' or 'lat' in dd.lower() or 'latitude' in dd.lower():
+                lat_name = dd
+            elif dd[0].lower() == 'x' or 'lon' in dd.lower() or 'longitude' in dd.lower():
+                lon_name = dd
 
     # If sample/ grid point , get original grid
     if full_saved is not None:
@@ -403,6 +428,10 @@ def write_total(ens_files, abs_files, ens_means, analysis_str, variables, start_
         desc_str = "Added " + as_ + " of variables " + ', '.join(
             variables) + " using sample point (" + str(lat) + "," + str(lon) + ")" + " within time period " + \
                    start_end_str
+    if points_sample_grid is not None:
+        desc_str = "Added " + as_ + " of variables " + ', '.join(
+            variables) + " regridded using points in " + points_sample_grid + " within time period " + \
+                   start_end_str
     hist_str = time.ctime(time.time()) + ': Commands used to produce file: ' + argv + ' \n ' + \
                        time.ctime(time.time()) + ': Functions used:  extract_data, compute_stats_analysis,' \
                                                  ' write_analysis_to_netcdf_file'
@@ -437,7 +466,7 @@ def write_total(ens_files, abs_files, ens_means, analysis_str, variables, start_
 
 
 
-def save_extract_data_to_file(list_ens, full_list_ens, ens_files, abs_files, args_dict):
+def save_extract_data_to_file(list_ens, full_list_ens, ens_files, abs_files, args_dict, num=''):
     """
     Save given objects to pickle file in current directory
     :param list_ens: List of ensemble dicts
@@ -446,7 +475,8 @@ def save_extract_data_to_file(list_ens, full_list_ens, ens_files, abs_files, arg
     :param abs_files: Absolute path of ens_files
     :param args_dict: dictionary of all arguments in command line
     """
-    afile = open(r'extracted_data.pkl', 'wb')
+
+    afile = open(r'extracted_data' + str(num) + '.pkl', 'wb')
     pickle.dump(list_ens, afile)
     pickle.dump(ens_files, afile)
     pickle.dump(abs_files, afile)
