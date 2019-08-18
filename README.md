@@ -77,7 +77,7 @@ shows the list of commands available to use and their descriptions.
 #### Example commands
 The file `E1_north_america_ens101_1970.nc` is given as example data in the `DATA` folder. To calculate the mean of variable `air_temperature`, and plot the histogram and map, we would call:
 ```
-python main.py E1_north_america 1970 -v air_temperature -e 1 -a mean -p 1
+python main.py 1970 -pf E1_north_america -v air_temperature -e 1 -a mean -p 1
 ```
 
 ## Assumptions
