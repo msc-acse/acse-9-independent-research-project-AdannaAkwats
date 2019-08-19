@@ -1,8 +1,8 @@
 import argparse
 from calendar import monthrange
-from extract import *
-from analysis import *
-from write_output import *
+from Extract import *
+from Analysis import *
+from WriteOutput import *
 from plots import *
 import directories
 from utils import check_valid_order, check_analysis, check_variables_covary, print_end_statement, check_valid_indices
@@ -657,11 +657,11 @@ def user_entry():
             sys.exit()
 
         # Extract data from files
-        saved, ens_files, abs_files, full_saved = extract_data(algae_type[0], varbs, start, end, ens,
-                                                monthly=monthly, lat=lat, lon=lon, grid=grid,
+        extract = Extract(algae_type[0], varbs, start, end, ens, monthly=monthly, lat=lat, lon=lon, grid=grid,
                                                                points_sample_grid=points_sample_grid,
                                                                lon_centre=lon_centre, maskfile=mask,
                                                                calc_areas=calc_areas)
+        saved, ens_files, abs_files, full_saved = extract.extract_data()
 
         if second_date_given:
             at = None
@@ -669,11 +669,11 @@ def user_entry():
                 at = algae_type[1]
             else:
                 at = algae_type[0]
-            saved2, ens_files2, abs_files2, full_saved2 = extract_data(at, varbs, start2, end2, ens,
-                                                                   monthly=monthly, lat=lat, lon=lon, grid=grid,
+            extract = Extract(at, varbs, start2, end2, ens, monthly=monthly, lat=lat, lon=lon, grid=grid,
                                                                    points_sample_grid=points_sample_grid,
                                                                    lon_centre=lon_centre, maskfile=mask,
                                                                    calc_areas=calc_areas)
+            saved2, ens_files2, abs_files2, full_saved2 = extract.extract_data()
 
         # Put all values in dictionary
         args_dict['algae_type'] = algae_type
@@ -714,19 +714,20 @@ def user_entry():
         saved, ens_files, abs_files, args_dict, full_saved = load_extract_data_from_file(loaded_data)
 
     # COMPUTE ANALYSIS
+    anlys = Analysis(saved)
     # user analysis
     func, ens_stats, func_name, analysis_str, nan_indices = None, None, None, None, None
     ens_stats2 = None
     if args_dict['func']:
         func = args_dict['func']
         file_name, func_name = func[0], func[1]
-        ens_stats = compute_user_analysis(saved, file_name, func_name)
+        ens_stats = anlys.compute_user_analysis(file_name, func_name)
     else:
         if second_date_given:
-            ens_stats, analysis_str, nan_indices = calc_stats_difference(saved, saved2, args_dict['analysis'],
+            ens_stats, analysis_str, nan_indices = anlys.calc_stats_difference(saved2, args_dict['analysis'],
                                                                          total=args_dict['total'])
         else:
-            ens_stats, analysis_str, nan_indices = compute_stats_analysis(saved, args_dict['analysis'],
+            ens_stats, analysis_str, nan_indices = anlys.compute_stats_analysis(args_dict['analysis'],
                                                                           total=args_dict['total'])
 
 
@@ -767,14 +768,14 @@ def user_entry():
 
     # WRITE ANALYSIS TO NETCDF FILE
     if save_out:
-        write_analysis_to_netcdf_file(ens_files, abs_files, ens_stats, analysis_str, args_dict['varbs'],
+        wo = WriteOutput(ens_files, abs_files, ens_stats, analysis_str, args_dict['varbs'],
                                        args_dict['start'], args_dict['end'], args_dict['argv'], saved, full_saved,
                                        total=args_dict['total'], lon_centre=args_dict['lon_centre'],
                                         mask=args_dict['mask'], lon=args_dict['lon'], lat=args_dict['lat'],
                                         grid=args_dict['grid'], user_func=func_name,
                                       points_sample_grid=args_dict['points_sample_grid'],
-                                      second_date_given=second_date_given, start_date2=args_dict['start2'],
-                                      end_date2=args_dict['end2'], test=True)
+                                      second_date_given=second_date_given, test=True)
+        wo.write_analysis_to_netcdf_file()
 
     print("PROGRAM SUCCESSFUL - TERMINAL FINISHED.")
     # End logging

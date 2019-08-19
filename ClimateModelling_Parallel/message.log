@@ -3,7 +3,7 @@ Arguments:
 - variables:  ['dic_deltap']
 - start date: 1953-1-1
 - end date: 1954-12-31
-Number of ensembles: 1
+Number of ensembles: 2
 Analysis:  ['mean']
 Plotting option selected.
 Save analysis data output selected.
@@ -13,8 +13,5 @@ function compute_stats_analysis: Averages of data successfully computed.
 Histogram data is saved in the RESULTS folder as a txt file.
 Map is saved in the RESULTS folder as a png file.
 WARNING: function create_timeseries: cannot construct timeseries with more than 1-dimension cube.
-BEFORE FUNCTION
-[{'dic_deltap': <iris 'Cube' of Ocn minus Atm pressure ofdic / (uatm) (time: 730; latitude: 200; longitude: 360)>}]
-[{'dic_deltap': <iris 'Cube' of Ocn minus Atm pressure ofdic / (uatm) (time: 730; latitude: 200; longitude: 360)>}]
 Ensemble files created in RESULTS/ensemble_averages folder.
 PROGRAM SUCCESSFUL - TERMINAL FINISHED.
