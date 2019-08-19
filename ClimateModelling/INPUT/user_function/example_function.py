@@ -4,19 +4,36 @@ import iris
 This is an script that given an example of a user-given function
 In the command line or input file :
 file_name = example_function 
-func_name = max_lon_lat
+func_name = simple_equation
 """
 
-
-def max_lon_lat(cube):
+def simple_equation(data):
     """
-    Get maximum longitude and latitude for each time
-    :param cube: iris.cube (of ONE variable)
-    :return: iris.cube containing time coordinate
+    Perform simple arithmetic with variables
+    :param data: a dictionary of variables and their data
+    :return: result of equation, name of results, unit
     """
 
-    max_cube = cube.collapsed(['longitude', 'latitude'], iris.analysis.MAX)
+    # Perform equation wirh temperature and salinity
+    result = data['temp_mean'].data * 2 + data['sal_mean'].data * 100
+    name = 'result'
+    long_name = 'result calculated using simple equation'
+    unit = 'K'
 
-    # print(max_cube)
+    return result, name, long_name, unit
 
-    return max_cube
+
+def difference_temp(data):
+    """
+    Perform simple arithmetic with variables
+    :param data: a dictionary of variables and their data
+    :return: result of equation, name of results, unit
+    """
+
+    # Perform equation wirh temperature and salinity
+    result = data['temp_mean'].data[0] - data['temp_mean'].data[5]
+    name = 'diff_temp'
+    long_name = 'difference of temperature calculated using difference_temp'
+    unit = 'K'
+
+    return result, name, long_name, unit
