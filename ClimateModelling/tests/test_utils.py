@@ -80,10 +80,10 @@ def test_get_ens_num_match():
     assert match == 101
 
 
-def test_get_ens_num_no_match():
+def test_get_ens_num_no_ens():
     f = 'ex_101_2000.nc'
     match = get_ens_num(f)
-    assert match == None
+    assert match == 101
 
 
 def test_get_file_two_years_match():
@@ -95,7 +95,7 @@ def test_get_file_two_years_match():
 def test_get_file_two_years_not_match():
     f = 'ex_ens101_2000.nc'
     match1 = get_file_two_years(f)
-    assert match1 == None
+    assert match1 == False
 
 
 def test_ens_to_indx_valid():
