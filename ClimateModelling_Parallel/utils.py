@@ -110,7 +110,7 @@ def get_file_two_years(file):
     match = re.search(f, file)
     if match:
         # Check strings are length 4 - years
-        if len(match.group(1)) > 4 and len(match.group(2)) > 4:
+        if len(match.group(1)) >= 4 and len(match.group(2)) >= 4:
             return int(match.group(1)), int(match.group(2))
     return False
 
