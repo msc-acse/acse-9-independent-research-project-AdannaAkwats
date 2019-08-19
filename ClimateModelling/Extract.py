@@ -16,11 +16,7 @@ from functools import reduce
 import operator
 import math
 from shapely.geometry import Polygon, Point
-from multiprocessing import Pool
-from functools import partial
-import parallel_settings
 warnings.filterwarnings("ignore")
-
 
 
 class Extract:
@@ -98,7 +94,7 @@ class Extract:
 
             # Get mask
             mask = self.contains_points(poly, x.ravel(), y.ravel())
-            full_mask = np.logical_or(full_mask, mask)
+            full_mask = np.logical_or(full_mask,  mask)
 
         # Reshape mask from 1D to 2D array
         m = full_mask.reshape(len(lats), len(lons))
@@ -218,209 +214,6 @@ class Extract:
         return cube.coord(lat_name).points, cube.coord(lon_name).points
 
 
-
-    def extract_parallel(self, till_start, till_end, dr, const_lon_name, const_lat_name, const_time_name, lon_name,
-                         lat_name, time_name, mask_set, level, mask_arr, sample, sp, nc_true, regrid_lats,
-                         regrid_lons, lons_points, lats_points, a_ens_files):
-        """
-        Helper function for parallelisation
-        """
-        datasets = xr.open_mfdataset(a_ens_files)
-
-        saved, orig_saved = {}, None
-        if sample or self.grid:
-            orig_saved = {}
-
-        for var in self.variables:
-            # Check if variable is in the dataset
-            if var not in datasets:  # throw an error and stop
-                print("ERROR in function extract_file : Variable %s not found in files" % var)
-                sys.exit()
-
-            # Select time period in dataset
-            try:
-                time_selected = datasets[var][dict(time=slice(till_start, till_end))]
-            except Exception:
-                time_selected = datasets[var]
-            # Convert to cube
-            cube = time_selected.to_iris()
-
-            if not dr:
-                # Get names of longitude and latitude variables
-                for c in cube.coords():
-                    dd = c.name()
-                    not_bnds = 'bound' not in dd and 'bnd' not in dd
-                    if not_bnds:
-                        if dd.lower() == 't' or dd.lower() == 'time':
-                            time_name = dd
-                        elif dd[0].lower() == 'y' or 'lat' in dd.lower() or 'latitude' in dd.lower():
-                            lat_name = dd
-                        elif dd[0].lower() == 'x' or 'lon' in dd.lower() or 'longitude' in dd.lower():
-                            lon_name = dd
-                        else:  # 3D data
-                            depth_name = dd
-                dr = True
-
-            # Rename coords
-            coord = cube.coord(lon_name)
-            coord.rename(const_lon_name)
-            coord = cube.coord(lat_name)
-            coord.rename(const_lat_name)
-            try:
-                coord = cube.coord(time_name)
-                coord.rename(const_time_name)
-            except Exception:
-                pass
-
-            # Calculate areas
-            if self.calc_areas:
-                self.calculate_areas(cube, const_lat_name, const_lon_name)
-                self.calc_areas = False
-
-            # Get longitude and latitude
-            lons, lats = cube.coord(const_lon_name).points, cube.coord(const_lat_name).points
-
-            # Centre to new longitude centre
-            if self.lon_centre is not None:
-                # Move longitude centre
-                lon_low = self.lon_centre - 180
-                lon_high = self.lon_centre + 180.000000000001
-                lons = iris.analysis.cartography.wrap_lons(lons, lon_low, lon_high - lon_low)
-                count, _ = shift_by_index(lons, self.lon_centre)
-                lons.sort()
-
-                # Get axis number
-                coords = cube.dim_coords
-                axis = 0
-                for j in coords:
-                    if j.name() == const_lon_name:
-                        break
-                    axis += 1
-
-                # Move map centre and replace data
-                shifted_cube = np.roll(cube.data, count, axis=axis)
-                cube.data = shifted_cube
-                dim_coord = cube.coord(const_lon_name)
-                centred_coord = iris.coords.DimCoord(lons, standard_name=dim_coord.standard_name,
-                                                     units=dim_coord.units,
-                                                     long_name=dim_coord.long_name, var_name=dim_coord.var_name,
-                                                     attributes=dim_coord.attributes, bounds=dim_coord.bounds)
-                # Replace coordinate
-                cube.replace_coord(centred_coord)
-
-            # Reduced cube
-            reduced_cube = None
-
-            # Masking
-            if self.maskfile is not None:
-                # Swap dimensions if not (depth, time, lat, lon)
-                c_n = [c.name() for c in cube.coords(dim_coords=True)]
-                indices = []
-                if len(c_n) == 4:
-                    for dim in c_n:
-                        if dim == depth_name:
-                            indices.append(0)
-                        if dim == time_name:
-                            indices.append(1)
-                        if dim == const_lat_name:
-                            indices.append(2)
-                        if dim == const_lon_name:
-                            indices.append(3)
-                elif len(c_n) == 3:
-                    for dim in c_n:
-                        if dim == time_name:
-                            indices.append(0)
-                        if dim == const_lat_name:
-                            indices.append(1)
-                        if dim == const_lon_name:
-                            indices.append(2)
-
-                if indices != [0, 1, 2, 3]:
-                    cube.transpose(indices)
-
-                # Get mask array and update cube
-                if not mask_set:
-                    mask_arr, level = self.get_mask(self.maskfile, cube.data, lons, lats)
-                    mask_set = True
-
-                if len(level) == 2:
-                    # Get specific cube.data
-                    level_low, level_high = level[0] - 1, level[1]
-                    mask_cube = np.ma.array(cube.data[level_low:level_high], mask=~mask_arr)
-                else:  # only 1 level given
-                    mask_cube = np.ma.array(cube.data[level[0] - 1], mask=~mask_arr)
-
-                if cube.data.shape != mask_cube.shape:
-                    if len(level) == 2:
-                        reduced_cube = cube[level_low:level_high]
-                    else:
-                        reduced_cube = cube[level[0] - 1]
-                    reduced_cube.data = mask_cube
-                    # Transpose back
-                    reduced_cube.transpose(indices)
-                else:
-                    cube.data = mask_cube
-                    # Transpose back
-                    cube.transpose(indices)
-
-            if sample or self.grid:
-                # Save interpolated values
-                found_grid = None
-
-                # Check lat and lon are in grid
-                if sp and (lons_points is not None or lats_points is not None):
-                    if not np.all(min(lons) <= lons_points) and np.all(lons_points <= max(lons)) and \
-                            not np.all(min(lats) <= lats_points) and np.all(lats_points <= max(lats)):
-                        print("ERROR: extract_data function: latitudes and longitudes are outside grid.")
-                        sys.exit()
-                elif not sp:
-                    if not (min(lons) <= self.lon <= max(lons)) or not (min(lats) <= self.lat <= max(lats)):
-                        print("ERROR: extract_data function: latitude and longitude are outside grid.")
-                        sys.exit()
-
-                # Construct lat and lon to give to iris cube interpolate function
-                # If more points are given
-                samples = None
-                if sp and (lons_points is not None or lats_points is not None):
-                    samples = [(const_lat_name, lats_points), (const_lon_name, lons_points)]
-                elif sp and nc_true:
-                    samples = [(const_lat_name, regrid_lats), (const_lon_name, regrid_lons)]
-                else:
-                    samples = [(const_lat_name, self.lat), (const_lon_name, self.lon)]
-
-                if self.grid:
-                    # Uses nearest neighbour interpolation and takes into account spherical distance
-                    if reduced_cube is None:
-                        found_grid = cube.interpolate(samples, iris.analysis.Nearest())
-                    else:
-                        found_grid = reduced_cube.interpolate(samples, iris.analysis.Nearest())
-
-                    # If in NaN grid space, tell user
-                    if np.isnan(found_grid.data).any():
-                        warnings.warn("NaN values found in interpolated grids.")
-                if sample:
-                    if reduced_cube is None:
-                        found_grid = cube.interpolate(samples, iris.analysis.Linear())
-                    else:
-                        found_grid = reduced_cube.interpolate(samples, iris.analysis.Linear())
-
-                saved[var] = found_grid
-
-                # Save original cube
-                if reduced_cube is None:
-                    orig_saved[var] = cube
-                else:
-                    orig_saved[var] = reduced_cube
-
-            else:
-                if reduced_cube is None:
-                    saved[var] = cube
-                else:
-                    saved[var] = reduced_cube
-
-        return saved, orig_saved
-
-
     def extract_data(self):
         """
         Extracts the data given by the user and stores them
@@ -521,23 +314,199 @@ class Extract:
         if sp and nc_true:
             regrid_lats, regrid_lons = regrid_from_file(self.points_sample_grid)
 
-        pool = Pool(processes=parallel_settings.NUM_PROCESSORS)
         # Go through variables in each ensemble
+        for i in range(self.num_ens):
 
-        func = partial(self.extract_parallel, till_start, till_end, dr, const_lon_name, const_lat_name, const_time_name,
-                       lon_name, lat_name, time_name, mask_set, level, mask_arr, sample, sp, nc_true, regrid_lats,
-                         regrid_lons, lons_points, lats_points)
+            datasets = xr.open_mfdataset(ens_files[i])
 
-        r = pool.map(func, ens_files)
-        pool.close()
-        pool.join()
+            for var in self.variables:
+                # Check if variable is in the dataset
+                if var not in datasets:  # throw an error and stop
+                    print("ERROR in function extract_file : Variable %s not found in files" % var)
+                    sys.exit()
 
-        # Get saved and orig_saved
-        saved = [tup[0] for tup in r]
-        orig_saved = [tup[1] for tup in r]
+                # Select time period in dataset
+                try:
+                    time_selected = datasets[var][dict(time=slice(till_start, till_end))]
+                except Exception:
+                    time_selected = datasets[var]
+                # Convert to cube
+                cube = time_selected.to_iris()
+
+                if not dr:
+                    # Get names of longitude and latitude variables
+                    for c in cube.coords():
+                        dd = c.name()
+                        not_bnds = 'bound' not in dd and 'bnd' not in dd
+                        if not_bnds:
+                            if dd.lower() == 't' or dd.lower() == 'time':
+                                time_name = dd
+                            elif dd[0].lower() == 'y' or 'lat' in dd.lower() or 'latitude' in dd.lower():
+                                lat_name = dd
+                            elif dd[0].lower() == 'x' or 'lon' in dd.lower() or 'longitude' in dd.lower():
+                                lon_name = dd
+                            else:  # 3D data
+                                depth_name = dd
+                    dr = True
+
+                # Rename coords
+                coord = cube.coord(lon_name)
+                coord.rename(const_lon_name)
+                coord = cube.coord(lat_name)
+                coord.rename(const_lat_name)
+                try:
+                    coord = cube.coord(time_name)
+                    coord.rename(const_time_name)
+                except Exception:
+                    pass
+
+                # Calculate areas
+                if self.calc_areas:
+                    self.calculate_areas(cube, const_lat_name, const_lon_name)
+                    self.calc_areas = False
+
+                # Get longitude and latitude
+                lons, lats = cube.coord(const_lon_name).points, cube.coord(const_lat_name).points
+
+                # Centre to new longitude centre
+                if self.lon_centre is not None:
+                    # Move longitude centre
+                    lon_low = self.lon_centre - 180
+                    lon_high = self.lon_centre + 180.000000000001
+                    lons = iris.analysis.cartography.wrap_lons(lons, lon_low, lon_high - lon_low)
+                    count, _ = shift_by_index(lons, self.lon_centre)
+                    lons.sort()
+
+                    # Get axis number
+                    coords = cube.dim_coords
+                    axis = 0
+                    for j in coords:
+                        if j.name() == const_lon_name:
+                            break
+                        axis += 1
+
+                    # Move map centre and replace data
+                    shifted_cube = np.roll(cube.data, count, axis=axis)
+                    cube.data = shifted_cube
+                    dim_coord = cube.coord(const_lon_name)
+                    centred_coord = iris.coords.DimCoord(lons, standard_name=dim_coord.standard_name,
+                                                         units=dim_coord.units,
+                                                         long_name=dim_coord.long_name, var_name=dim_coord.var_name,
+                                                         attributes=dim_coord.attributes, bounds=dim_coord.bounds)
+                    # Replace coordinate
+                    cube.replace_coord(centred_coord)
+
+                # Reduced cube
+                reduced_cube = None
+
+                # Masking
+                if self.maskfile is not None:
+                    # Swap dimensions if not (depth, time, lat, lon)
+                    c_n = [c.name() for c in cube.coords(dim_coords=True)]
+                    indices = []
+                    if len(c_n) == 4:
+                        for dim in c_n:
+                            if dim == depth_name:
+                                indices.append(0)
+                            if dim == time_name:
+                                indices.append(1)
+                            if dim == const_lat_name:
+                                indices.append(2)
+                            if dim == const_lon_name:
+                                indices.append(3)
+                    elif len(c_n) == 3:
+                        for dim in c_n:
+                            if dim == time_name:
+                                indices.append(0)
+                            if dim == const_lat_name:
+                                indices.append(1)
+                            if dim == const_lon_name:
+                                indices.append(2)
+
+                    if indices != [0, 1, 2, 3]:
+                        cube.transpose(indices)
+
+                    # Get mask array and update cube
+                    if not mask_set:
+                        mask_arr, level = self.get_mask(self.maskfile, cube.data, lons, lats)
+                        mask_set = True
+
+                    if len(level) == 2:
+                        # Get specific cube.data
+                        level_low, level_high = level[0] - 1, level[1]
+                        mask_cube = np.ma.array(cube.data[level_low:level_high], mask=~mask_arr)
+                    else: # only 1 level given
+                        mask_cube = np.ma.array(cube.data[level[0]-1], mask=~mask_arr)
+
+                    if cube.data.shape != mask_cube.shape:
+                        if len(level) == 2:
+                            reduced_cube = cube[level_low:level_high]
+                        else:
+                            reduced_cube = cube[level[0]-1]
+                        reduced_cube.data = mask_cube
+                        # Transpose back
+                        reduced_cube.transpose(indices)
+                    else:
+                        cube.data = mask_cube
+                        # Transpose back
+                        cube.transpose(indices)
+
+                if sample or self.grid:
+                    # Save interpolated values
+                    found_grid = None
+
+                    # Check lat and lon are in grid
+                    if sp and (lons_points is not None or lats_points is not None):
+                        if not np.all(min(lons) <= lons_points) and np.all(lons_points <=  max(lons)) and \
+                        not np.all(min(lats) <= lats_points) and np.all(lats_points <=  max(lats)):
+                            print("ERROR: extract_data function: latitudes and longitudes are outside grid.")
+                            sys.exit()
+                    elif not sp:
+                        if not (min(lons) <= self.lon <= max(lons)) or not (min(lats) <= self.lat <= max(lats)):
+                            print("ERROR: extract_data function: latitude and longitude are outside grid.")
+                            sys.exit()
+
+                    # Construct lat and lon to give to iris cube interpolate function
+                    # If more points are given
+                    samples = None
+                    if sp and (lons_points is not None or lats_points is not None):
+                        samples = [(const_lat_name, lats_points), (const_lon_name, lons_points)]
+                    elif sp and nc_true:
+                        samples = [(const_lat_name, regrid_lats), (const_lon_name, regrid_lons)]
+                    else:
+                        samples = [(const_lat_name, self.lat), (const_lon_name, self.lon)]
+
+
+                    if self.grid:
+                        # Uses nearest neighbour interpolation and takes into account spherical distance
+                        if reduced_cube is None:
+                            found_grid = cube.interpolate(samples, iris.analysis.Nearest())
+                        else:
+                            found_grid = reduced_cube.interpolate(samples, iris.analysis.Nearest())
+
+                        # If in NaN grid space, tell user
+                        if np.isnan(found_grid.data).any():
+                            warnings.warn("NaN values found in interpolated grids.")
+                    if sample:
+                        if reduced_cube is None:
+                            found_grid = cube.interpolate(samples, iris.analysis.Linear())
+                        else:
+                            found_grid = reduced_cube.interpolate(samples, iris.analysis.Linear())
+
+                    saved[i][var] = found_grid
+
+                    # Save original cube
+                    if reduced_cube is None:
+                        orig_saved[i][var] = cube
+                    else:
+                        orig_saved[i][var] = reduced_cube
+
+                else:
+                    if reduced_cube is None:
+                        saved[i][var] = cube
+                    else:
+                        saved[i][var] = reduced_cube
 
         print("function extract_data: Data successfully extracted from files.")
 
         return saved, ens_files, abs_files, orig_saved
-
-

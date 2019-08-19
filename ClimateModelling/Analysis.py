@@ -5,9 +5,6 @@ import numpy as np
 import xarray as xr
 import iris.analysis.maths as iam
 import sys
-from multiprocessing import Pool
-from functools import partial
-import parallel_settings
 
 
 class Analysis:
@@ -169,39 +166,6 @@ class Analysis:
         return analysis_new_order
 
 
-    def compute_stats_parallel(self, time_name, analysis, ens):
-        """
-        Helper function for parallelisation
-        """
-        mean_calcs, std_calcs, median_calcs, rms_calcs = {}, {}, {}, {}
-        # Calculate the mean of each variable in the dictionary given
-        for d in ens:
-            for a in analysis:
-                if a == 'mean':
-                    mean_calc = ens[d].collapsed(time_name, iris.analysis.MEAN, mdtol=0)
-                    mean_calcs[d] = mean_calc
-                if a == 'std':
-                    std_calc = ens[d].collapsed(time_name, iris.analysis.STD_DEV, mdtol=0)
-                    std_calcs[d] = std_calc
-                if a == 'median':
-                    median_calc = ens[d].collapsed(time_name, iris.analysis.MEDIAN, mdtol=0)
-                    median_calcs[d] = median_calc
-                if a == 'rms':
-                    rms_calc = ens[d].collapsed(time_name, iris.analysis.RMS, mdtol=0)
-                    rms_calcs[d] = rms_calc
-        calcs = []
-        if 'mean' in analysis:
-            calcs.append(mean_calcs)
-        if 'std' in analysis:
-            calcs.append(std_calcs)
-        if 'median' in analysis:
-            calcs.append(median_calcs)
-        if 'rms' in analysis:
-            calcs.append(rms_calcs)
-
-        return calcs
-
-
     def compute_stats_analysis(self, analysis, total=False):
         """
         Analyse the data given - in this case it computes the mean, std, median and rms
@@ -220,7 +184,7 @@ class Analysis:
         if analysis:
             analysis = [a.lower() for a in analysis]
         elif total and not analysis:
-            return calculate_avg_ensembles(analysis)
+            return self.calculate_avg_ensembles(analysis)
         elif not total and not analysis:
             return None, False, None
 
@@ -231,15 +195,38 @@ class Analysis:
         analysis = self.reorder_analysis_str(analysis)
 
         time_name = 'time'
+        # Holds the means for each ensemble
+        ens_calcs = []
+        for dict_ in self.list_ens:
+            # Used only if we analyse all at the same time
+            mean_calcs, std_calcs, median_calcs, rms_calcs = {}, {}, {}, {}
+            # Calculate the mean of each variable in the dictionary given
+            for d in dict_:
+                for a in analysis:
+                    if a == 'mean':
+                        mean_calc = dict_[d].collapsed(time_name, iris.analysis.MEAN, mdtol=0)
+                        mean_calcs[d] = mean_calc
+                    if a == 'std':
+                        std_calc = dict_[d].collapsed(time_name, iris.analysis.STD_DEV, mdtol=0)
+                        std_calcs[d] = std_calc
+                    if a == 'median':
+                        median_calc = dict_[d].collapsed(time_name, iris.analysis.MEDIAN, mdtol=0)
+                        median_calcs[d] = median_calc
+                    if a == 'rms':
+                        rms_calc = dict_[d].collapsed(time_name, iris.analysis.RMS, mdtol=0)
+                        rms_calcs[d] = rms_calc
+            calcs = []
+            if 'mean' in analysis:
+                calcs.append(mean_calcs)
+            if 'std' in analysis:
+                calcs.append(std_calcs)
+            if 'median' in analysis:
+                calcs.append(median_calcs)
+            if 'rms' in analysis:
+                calcs.append(rms_calcs)
+            ens_calcs.append(calcs)
 
-        # Assign process to each ensemble
-        pool = Pool(processes=parallel_settings.NUM_PROCESSORS)
-        func = partial(self.compute_stats_parallel, time_name, analysis)
-        ens_calcs = pool.map(func, self.list_ens)
-        pool.close()
-        pool.join()
-
-        # Find ensembles average
+            # Find ensembles average
         if total:
             return self.compute_total_stats_analysis(analysis, nan_indices, ens_calcs)
 
