@@ -22,7 +22,7 @@ def ex(year, monthly=False):
     file_name = 'ex1_ens101_' + str(year) + '.nc'
     if monthly:
         file_name = 'ex1monthly_ens101_' + str(year) + '.nc'
-    file_name = os.path.join(directories.CLIMATE_DATA, file_name)
+    file_name = os.path.join(directories.DATA, file_name)
     dataset = Dataset(file_name, 'w', format='NETCDF4_CLASSIC')
 
     # Create datasets
@@ -51,7 +51,6 @@ def ex(year, monthly=False):
     times.calendar_type = 'NOLEAP'
     times.units = 'days since 2000-01-01 00:00:00'
     times.long_name = 'time'
-    temp.missing_value = -1.e+20
     temp.units = 'K'
     temp.long_name = 'temperature'
 
@@ -75,7 +74,7 @@ def ex(year, monthly=False):
         t = np.cumsum([0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30])
         times[:] = t + 365 * (year - 2000)
 
-    print("New file " + file_name + " created in " + directories.CLIMATE_DATA + " directory.")
+    print("New file " + file_name + " created in " + directories.DATA + " directory.")
 
     dataset.close()
 
@@ -89,7 +88,7 @@ def ex_level(year, swap=False):
     assert (year >= 2000)
     # time - 365 daily , 2000 - 2005
     file_name = 'ex1level_ens101_' + str(year) + '.nc'
-    file_name = os.path.join(directories.CLIMATE_DATA, file_name)
+    file_name = os.path.join(directories.DATA, file_name)
     dataset = Dataset(file_name, 'w', format='NETCDF4_CLASSIC')
 
     # Create datasets
@@ -123,7 +122,6 @@ def ex_level(year, swap=False):
     times.calendar_type = 'NOLEAP'
     times.units = 'days since 2000-01-01 00:00:00'
     times.long_name = 'time'
-    temp.missing_value = -1.e+20
     temp.units = 'K'
     temp.long_name = 'temperature'
     levels.units = "hPa"
@@ -145,7 +143,7 @@ def ex_level(year, swap=False):
 
     times[:] = np.asarray(range(365)) + 365 * (year - 2000)
 
-    print("New file " + file_name + " created in " + directories.CLIMATE_DATA + " directory.")
+    print("New file " + file_name + " created in " + directories.DATA + " directory.")
 
     dataset.close()
 
@@ -159,7 +157,7 @@ def ex2(year):
     assert (year >= 2000)
     # time - 365 daily , from 2000, 2 variables
     file_name = 'ex2_ens101_' + str(year) + '.nc'
-    file_name = os.path.join(directories.CLIMATE_DATA, file_name)
+    file_name = os.path.join(directories.DATA, file_name)
     dataset = Dataset(file_name, 'w', format='NETCDF4_CLASSIC')
 
     # Create datasets
@@ -190,7 +188,6 @@ def ex2(year):
     times.calendar_type = 'NOLEAP'
     times.units = 'days since 2000-01-01 00:00:00'
     times.long_name = 'time'
-    temp.missing_value = -1.e+20
     temp.units = 'K'
     temp.long_name = 'temperature'
     sal.long_name = 'salinity'
@@ -208,7 +205,7 @@ def ex2(year):
 
     times[:] = np.asarray(range(365)) + 365 * (year - 2000)
 
-    print("New file " + file_name + " created in " + directories.CLIMATE_DATA + " directory.")
+    print("New file " + file_name + " created in " + directories.DATA + " directory.")
 
     dataset.close()
 
@@ -221,7 +218,7 @@ def ex2_level(year):
     assert (year >= 2000)
     # time - 365 daily , from 2000, 2 variables
     file_name = 'ex2level_ens101_' + str(year) + '.nc'
-    file_name = os.path.join(directories.CLIMATE_DATA, file_name)
+    file_name = os.path.join(directories.DATA, file_name)
     dataset = Dataset(file_name, 'w', format='NETCDF4_CLASSIC')
 
     # Create datasets
@@ -274,7 +271,7 @@ def ex2_level(year):
 
     times[:] = np.asarray(range(365)) + 365 * (year - 2000)
 
-    print("New file " + file_name + " created in " + directories.CLIMATE_DATA + " directory.")
+    print("New file " + file_name + " created in " + directories.DATA + " directory.")
 
     dataset.close()
 
@@ -286,7 +283,7 @@ def ex2_level(year):
 # ex(2002)
 # ex(2003)
 #
-ex_level(2000, swap=True)
+# ex_level(2000, swap=True)
 # ex2_level(2000)
 
 # ex(2000, monthly=True)
@@ -298,3 +295,8 @@ ex_level(2000, swap=True)
 # ex2(2001)
 # ex2(2002)
 # ex2(2003)
+
+ex2(2000)
+ex2(2001)
+ex2(2002)
+ex2(2003)

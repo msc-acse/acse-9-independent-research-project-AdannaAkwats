@@ -22,7 +22,6 @@ import parallel_settings
 warnings.filterwarnings("ignore")
 
 
-
 def contains_points(polygon, xp, yp):
     """
     Construct boolean array that shows if coords xp and yp are in polygon
@@ -133,9 +132,9 @@ def calculate_areas(cube, lat_name, lon_name):
 
     areas_arr = None
     if len(cube.data.shape) == 3:
-        areas_arr = iris.analysis.cartography.area_weights(cube[0])
+        areas_arr = (np.pi / 180) * np.asarray(iris.analysis.cartography.area_weights(cube[0]))
     elif len(cube.data.shape) == 4:
-        areas_arr = iris.analysis.cartography.area_weights(cube[0, 0])
+        areas_arr = (np.pi / 180) * np.asarray(iris.analysis.cartography.area_weights(cube[0, 0]))
 
     # Write areas to netcdf
     file_area = os.path.join(directories.ANALYSIS, "areas.nc")
@@ -169,13 +168,48 @@ def calculate_areas(cube, lat_name, lon_name):
     # Close dataset
     dataset.close()
 
+    print("Areas file created in " + directories.ANALYSIS + " folder.")
+
+
+def regrid_from_file(points_sample_grid):
+    """
+    Get latitude and longitude points from netcdf file
+    :param points_sample_grid: netcdf file name
+    :return: latitude, longitude, arrays
+    """
+
+    # Get cube from file
+    cubes =  iris.load(os.path.join(directories.DATA, points_sample_grid))
+    cube = cubes[0]
+
+    # Get latiude and longitude
+    lat_name, lon_name = None, None
+    # Get names of coordinates
+    for c in cube.coords():
+        dd = c.name()
+        not_bnds = 'bound' not in dd and 'bnd' not in dd
+        if not_bnds:
+            if dd[0].lower() == 'y' or 'lat' in dd.lower() or 'latitude' in dd.lower():
+                lat_name = dd
+            if dd[0].lower() == 'x' or 'lon' in dd.lower() or 'longitude' in dd.lower():
+                lon_name = dd
+
+    # Get points
+    return cube.coord(lat_name).points, cube.coord(lon_name).points
+
 
 def extract_parallel(variables, till_start, till_end, dr, const_lon_name, const_lat_name, const_time_name,
                  calc_areas, lon_centre, lon_name, lat_name, time_name, maskfile, mask_set, level, mask_arr,
-                 sample, grid, lat, lon, target_xy, a_ens_files):
+                 sample, grid, lat, lon, sp, nc_true, regrid_lats, regrid_lons, lons_points, lats_points, a_ens_files):
+    """
+    Helper function for parallelisation
+    """
     datasets = xr.open_mfdataset(a_ens_files)
 
-    saved, orig_saved = {}, {}
+    saved, orig_saved = {}, None
+    if sample or grid:
+        orig_saved = {}
+
     for var in variables:
         # Check if variable is in the dataset
         if var not in datasets:  # throw an error and stop
@@ -183,25 +217,26 @@ def extract_parallel(variables, till_start, till_end, dr, const_lon_name, const_
             sys.exit()
 
         # Select time period in dataset
-        time_selected = datasets[var][dict(time=slice(till_start, till_end))]
+        try:
+            time_selected = datasets[var][dict(time=slice(till_start, till_end))]
+        except Exception:
+            time_selected = datasets[var]
         # Convert to cube
         cube = time_selected.to_iris()
 
         if not dr:
             # Get names of longitude and latitude variables
-            # Get list of coordinate names
-            coord_names = [coord.name() for coord in cube.coords()]
-            # Get names of coordinates
-            for dd in list(coord_names):
-                if dd.lower() == 't' or dd.lower() == 'time':
-                    time_name = dd
-                elif dd[0].lower() == 'y' or 'lat' in dd.lower() or 'latitude' in dd.lower():
-                    lat_name = dd
-                elif dd[0].lower() == 'x' or 'lon' in dd.lower() or 'longitude' in dd.lower():
-                    lon_name = dd
-                # Check if 3D data
-                else:
-                    if not (dd == 'bounds' or dd == 'bnds'):
+            for c in cube.coords():
+                dd = c.name()
+                not_bnds = 'bound' not in dd and 'bnd' not in dd
+                if not_bnds:
+                    if dd.lower() == 't' or dd.lower() == 'time':
+                        time_name = dd
+                    elif dd[0].lower() == 'y' or 'lat' in dd.lower() or 'latitude' in dd.lower():
+                        lat_name = dd
+                    elif dd[0].lower() == 'x' or 'lon' in dd.lower() or 'longitude' in dd.lower():
+                        lon_name = dd
+                    else:  # 3D data
                         depth_name = dd
             dr = True
 
@@ -210,8 +245,11 @@ def extract_parallel(variables, till_start, till_end, dr, const_lon_name, const_
         coord.rename(const_lon_name)
         coord = cube.coord(lat_name)
         coord.rename(const_lat_name)
-        coord = cube.coord(time_name)
-        coord.rename(const_time_name)
+        try:
+            coord = cube.coord(time_name)
+            coord.rename(const_time_name)
+        except Exception:
+            pass
 
         # Calculate areas
         if calc_areas:
@@ -225,7 +263,7 @@ def extract_parallel(variables, till_start, till_end, dr, const_lon_name, const_
         if lon_centre is not None:
             # Move longitude centre
             lon_low = lon_centre - 180
-            lon_high = lon_centre + 180.1
+            lon_high = lon_centre + 180.000000000001
             lons = iris.analysis.cartography.wrap_lons(lons, lon_low, lon_high - lon_low)
             count, _ = shift_by_index(lons, lon_centre)
             lons.sort()
@@ -309,12 +347,26 @@ def extract_parallel(variables, till_start, till_end, dr, const_lon_name, const_
             found_grid = None
 
             # Check lat and lon are in grid
-            if not (min(lons) <= lon <= max(lons)) or not (min(lats) <= lat <= max(lats)):
-                print("ERROR: extract_data function: latitude and longitude are outside grid.")
-                sys.exit()
+            if sp and (lons_points is not None or lats_points is not None):
+                if not np.all(min(lons) <= lons_points) and np.all(lons_points <= max(lons)) and \
+                        not np.all(min(lats) <= lats_points) and np.all(lats_points <= max(lats)):
+                    print("ERROR: extract_data function: latitudes and longitudes are outside grid.")
+                    sys.exit()
+            elif not sp:
+                if not (min(lons) <= lon <= max(lons)) or not (min(lats) <= lat <= max(lats)):
+                    print("ERROR: extract_data function: latitude and longitude are outside grid.")
+                    sys.exit()
 
             # Construct lat and lon to give to iris cube interpolate function
-            samples = [(const_lat_name, target_xy[1]), (const_lon_name, target_xy[0])]
+            # If more points are given
+            samples = None
+            if sp and (lons_points is not None or lats_points is not None):
+                samples = [(const_lat_name, lats_points), (const_lon_name, lons_points)]
+            elif sp and nc_true:
+                samples = [(const_lat_name, regrid_lats), (const_lon_name, regrid_lons)]
+            else:
+                samples = [(const_lat_name, lat), (const_lon_name, lon)]
+
             if grid:
                 # Uses nearest neighbour interpolation and takes into account spherical distance
                 if reduced_cube is None:
@@ -331,7 +383,6 @@ def extract_parallel(variables, till_start, till_end, dr, const_lon_name, const_
                 else:
                     found_grid = reduced_cube.interpolate(samples, iris.analysis.Linear())
 
-            # TODO: what if variable = Nan ???
             saved[var] = found_grid
 
             # Save original cube
@@ -350,7 +401,7 @@ def extract_parallel(variables, till_start, till_end, dr, const_lon_name, const_
 
 
 def extract_data(algae_type, variables, start_date, end_date, num_ens, monthly=False, lat=None, lon=None,
-                 grid=None, lon_centre=None, maskfile=None, calc_areas=False, test=True):
+                 grid=None, points_sample_grid=None, lon_centre=None, maskfile=None, calc_areas=False, test=True):
     """
     Extracts the data given by the user and stores them
     :param algae_type: name of prefix of filename to look into
@@ -362,6 +413,7 @@ def extract_data(algae_type, variables, start_date, end_date, num_ens, monthly=F
     :param lat: latitude, set if grid or sample point, floats
     :param lon: longitude, set if grid or sample point, floats
     :param grid: set if grid point is given
+    :param points_sample_grid: file (txt or nc) that contains sample or grid points
     :param lon_centre: longitude center , float
     :param maskfile: file that contains mask data, string
     :param calc_areas: set if areas of grid boxes should be calculated, boolean
@@ -379,9 +431,17 @@ def extract_data(algae_type, variables, start_date, end_date, num_ens, monthly=F
     assert variables is not None
     assert check_list_date(start_date) and check_list_date(end_date)
 
+    # If points of sample or grid, then open file
+    sp, lons_points, lats_points, nc_true = False, None, None, False
+    if points_sample_grid is not None:
+        lons_points, lats_points, nc_true = get_sample_grid_points(points_sample_grid)
+        sp = True
+
     # Check if sample point
     sample = False
     if lat and lon and not grid:
+        sample = True
+    if sp and not grid:
         sample = True
 
     # Only once
@@ -392,10 +452,17 @@ def extract_data(algae_type, variables, start_date, end_date, num_ens, monthly=F
     day_e, mon_e, yr_e = end_date[0], end_date[1], end_date[2]
 
     # Get path
-    path = directories.CLIMATE_DATA
+    path = directories.DATA
 
     # Get files and min and maximum year
     files, min_yr, max_yr = get_files_time_period(algae_type, yr_s, yr_e)
+
+    # Save list of dictionaries - each dict in the list is an ensemble
+    saved = [{} for _ in range(num_ens)]
+    # Save original (without sample or grid point)
+    orig_saved = None
+    if sample or grid:
+        orig_saved = [{} for _ in range(num_ens)]
 
     # Get files in absolute path saved in ensemble groups
     files = [os.path.join(path, file) for file in files]
@@ -429,19 +496,17 @@ def extract_data(algae_type, variables, start_date, end_date, num_ens, monthly=F
     # Used to compute mask array and longitude centre only once
     mask_set, mask_arr, level = False, None, None
 
-    # Transform the lon lat point into rotated coordinates
-    target_xy = None
-    if sample or grid:
-        pp_cs = iris.coord_systems.GeogCS(iris.fileformats.pp.EARTH_RADIUS)
-        rot_pole = pp_cs.as_cartopy_crs()
-        target_xy = rot_pole.transform_point(lon, lat, ccrs.Geodetic())
+    # If sample/grid point and regrid file
+    regrid_lats, regrid_lons = None, None
+    if sp and nc_true:
+        regrid_lats, regrid_lons = regrid_from_file(points_sample_grid)
 
     pool = Pool(processes=parallel_settings.NUM_PROCESSORS)
     # Go through variables in each ensemble
 
     func = partial(extract_parallel, variables, till_start, till_end, dr, const_lon_name, const_lat_name, const_time_name,
                  calc_areas, lon_centre, lon_name, lat_name, time_name, maskfile, mask_set, level, mask_arr,
-                 sample, grid, lat, lon, target_xy)
+                 sample, grid, lat, lon, sp, nc_true, regrid_lats, regrid_lons, lons_points, lats_points)
 
     r = pool.map(func, ens_files)
     pool.close()

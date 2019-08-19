@@ -1,0 +1,4 @@
+# Sample or grid points to choose from data
+# Comments in file can have '#' at the start of the line
+# The list of sample points of (longitude, latitude)]
+[(-25, -40), (75, -40), (-25, 40), (75,40)]

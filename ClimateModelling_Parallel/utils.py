@@ -8,7 +8,7 @@ import directories
 import ast
 import sys
 from collections import defaultdict
-
+import xarray as xr
 
 """
 Script that contains useful functions
@@ -45,7 +45,7 @@ def check_analysis(a):
     ans = ['mean', 'rms', 'std', 'median']
 
     # Check that analysis a is in ans
-    all_elements_contained = all(elem in ans for elem in a)
+    all_elements_contained = all(elem.lower() in ans for elem in a)
 
     if not all_elements_contained:
         print("ERROR in function check_analysis: Analysis given cannot be selected. "
@@ -67,6 +67,24 @@ def check_variables_covary(varbs):
     return True
 
 
+def check_valid_indices(index):
+    """
+    Check that index given is valid
+    :param index: string
+    :return: boolean or throws error
+    """
+
+    # List of indices that can be selected
+    indices = ['enso', 'nino12', 'nino4', 'tni', 'iod', 'amo', 'pdo', 'ao', 'aao', 'nao']
+
+    if index not in indices:
+        print("ERROR in function check_valid_indices: Index " + str(index) + " given cannot be selected. "
+              "Ensure that index is one of " + str(indices) + ".")
+        sys.exit()
+    return True
+
+
+
 def get_ens_num(file):
     """
     Return the ensemble number in file name
@@ -77,6 +95,8 @@ def get_ens_num(file):
     match = re.search(f, file)
     if match:
         return int(match.group(1))
+    # If no 'ens' seen, assume only one ensemble given
+    return 101
 
 
 def get_file_two_years(file):
@@ -89,7 +109,10 @@ def get_file_two_years(file):
 
     match = re.search(f, file)
     if match:
-        return int(match.group(1)), int(match.group(2))
+        # Check strings are length 4 - years
+        if len(match.group(1)) > 4 and len(match.group(2)) > 4:
+            return int(match.group(1)), int(match.group(2))
+    return False
 
 
 def ens_to_indx(ens_num, number_of_ensembles, max_start=1000000):
@@ -188,7 +211,7 @@ def get_files_time_period(prefix, yr_s, yr_e):
     """
 
     # Get path and folder
-    path = directories.CLIMATE_DATA + '/'
+    path = directories.DATA + '/'
     folder = os.listdir(path)
 
     # Files should be automatically ordered by year assuming that the format of files is what we expect
@@ -222,6 +245,7 @@ def get_files_time_period(prefix, yr_s, yr_e):
     # Check if files are empty
     if len(files) == 0:
         print("ERROR in function get_files_time_period: No NetCDF data files given within selected time period.")
+        print("  - Please ensure that the start and end years given are the same as in the file name.")
         sys.exit()
 
     return files, min_yr, max_yr
@@ -255,7 +279,7 @@ def get_polygons(mask_file):
                     except Exception:
                         print("ERROR in function get_polygons: Argument may be missing a semi-colon.")
                         print(
-                            "Please see mask_example.out for an example of what kind of string is expected to construct "
+                            "Please see mask_example.txt for an example of what kind of string is expected to construct "
                             "polygons.")
                         sys.exit()
                     if '-' in level:
@@ -278,7 +302,7 @@ def get_polygons(mask_file):
                         converted = ast.literal_eval(curline)
                     except Exception:
                         print("ERROR in function get_polygons: List not constructed properly in mask file.")
-                        print("Please see mask_example.out for an example of what kind of string is expected to construct "
+                        print("Please see mask_example.txt for an example of what kind of string is expected to construct "
                               "polygons.")
                         sys.exit()
 
@@ -468,3 +492,60 @@ def print_end_statement():
     print("Progress and potential errors are logged in message.log file.")
     print("To open message.log, type in cmd line: less message.log")
     print("  Press q to quit file when finished.")
+
+
+def open_txt_points(filename):
+    """
+    Gets latitudes and longitudes from sample/grid point file
+    :param filename: points txt file to open
+    :return: lons, lats
+    """
+    converted = None
+    with open(filename, 'r') as f:
+        for curline in f:
+            # check if the current line
+            # starts with "#"
+            if "#" not in curline and len(curline) > 1:
+                try:
+                    converted = ast.literal_eval(curline)
+                except Exception:
+                    print("ERROR in function open_txt_points: List not constructed properly in sample/grid points file.")
+                    print("Please see sample_points.txt for an example of what kind of string is expected to construct "
+                          "sample points.")
+                    sys.exit()
+
+
+    # Get list of latitude and longitude
+    lons, lats = zip(*converted)
+    return lons, lats
+
+
+def get_sample_grid_points(filename):
+    """
+    Get sample/grid points from filename
+    :param filename: file to open
+    :return: longitudes and latitudes and setting if nc file given
+    """
+    lons, lats, nc_true = None, None, False
+    # Check if txt file
+    if filename.endswith('.txt'):
+        filename = os.path.join(directories.INPUT, filename)
+        lons, lats = open_txt_points(filename)
+    elif filename.endswith('.nc'):
+        nc_true = True
+    return lons, lats, nc_true
+
+
+def check_sample_grid_one_arg(arg, func):
+    """
+    Check one argument of sample / grid
+    :param arg: argument
+    :param func: function calling this
+    :return: error or boolean
+    """
+    sg = arg[0]
+    if not (sg.endswith(".nc") or sg.endswith(".txt")):
+        print("ERROR in function " + str(func) + ": Sample or grid argument invalid.")
+        print("  - Argument must be (lat, lon) or .txt file or .nc file")
+        sys.exit()
+    return True

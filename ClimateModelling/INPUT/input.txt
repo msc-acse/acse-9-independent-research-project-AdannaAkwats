@@ -57,7 +57,8 @@ Histogram bin selection: histogram_bins.txt
 Longitude centre:
 Save extract data: False
 User function:
-Calculate areas: True
+Calculate areas:
+Calculate index:
 #
 #
 # ------------------------------------------------------------------------------
@@ -118,10 +119,20 @@ Calculate areas: True
 # ------
 # Grid Point: Latitude, Longitude
 #        Uses grid point that latitude and longitude lies in.
+#        Other commands:
+#        - You can define a list of grid points in a .txt file e.g check INPUT/sample_points.txt
+#           - Grid Point: sample_points.txt
+#        - You can regrid to a grid (using nearest neighbour interpolation) defined in a NETCDF file:
+#           - Grid Point: example_file.nc
 #        Cannot be used in conjunction with sample point.
 # ------
 # Sample Point: Latitude, Longitude
-#        Uses sample point given by latitude and longitude using interpolation.
+#        - Uses sample point given by latitude and longitude using interpolation.
+#        Other commands:
+#        - You can define a list of sample points in a .txt file e.g check INPUT/sample_points.txt and call
+#           - Sample Point: sample_points.txt
+#        - You can regrid to a grid (using linear interpolation) defined in a NETCDF file:
+#           - Sample Point: example_file.nc
 #        Cannot be used in conjunction with grid point.
 # ------
 # Mask file: Uses masking grid given as a file. Contains description of
@@ -165,5 +176,21 @@ Calculate areas: True
 # ------
 # Calculate areas: True/False: Calculate areas of grid boxes of latitude and longitude and saves to
 #       NetCDF file areas.nc in results folder.
-#
-#
+# ------
+# Caculate index: index
+#        Calculate the index given
+#        The control run is the FIRST file prefix set and the corresponding start/end date.
+#        The future run is the SECOND file prefix set and the corresponding second start/end date
+#        Types of inidices that can be calculated:
+#        enso : The Oceanic Niño Index (ONI)
+#        nino12 : Niño 1+2 Index
+#        nino4 : Niño 4 Index
+#        tni : The Trans-Niño Index (TNI)
+#        iod : Indian Ocean Dipole (IOD) Mode Index
+#        amo : Atlantic Multidecadal Oscillation (AMO) Index
+#        pdo : Pacific Decadal Oscillation (PDO) Index
+#        ao : Arctic Oscillation (AO; Northern Annular Mode) Index
+#        aao : Antarctic Oscillation (AAO; Southern Annular Mode) Index
+#        nao : North Atlantic Oscillation (NAO) Index
+# ------
+

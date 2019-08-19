@@ -7,7 +7,8 @@ import xarray as xr
 
 def write_analysis_to_netcdf_file(ens_files, abs_files, ens_means, analysis_str, variables, start_date, end_date, argv,
                                saved, full_saved, total=False, lon_centre=None, mask=None, lon=None, lat=None,
-                                grid=None, user_func=False, points_sample_grid=None, test=False):
+                                grid=None, user_func=False, points_sample_grid=None, second_date_given=False,
+                                  start_date2=None, end_date2=None, test=False):
     """
     Write analysis computed in netcdf files
     :param ens_files: initial files arranged in ensemble order
@@ -28,6 +29,9 @@ def write_analysis_to_netcdf_file(ens_files, abs_files, ens_means, analysis_str,
     :param grid: set if grid point is given
     :param user_func: user function name
     :param points_sample_grid: file (txt or nc) that contains sample or grid points
+    :param second_date_given: if set, multi model averages calculated
+    :param start_date2: second model start date
+    :param end_date2: second model end date
     :param test: if test is true, make some changes specific to files on my pc
     :return: None, files created in folder analysis/ensemble_means
     """
@@ -35,13 +39,13 @@ def write_analysis_to_netcdf_file(ens_files, abs_files, ens_means, analysis_str,
     assert ens_files is not None
     assert abs_files is not None
     assert variables is not None
-    assert analysis_str is not None
     assert check_list_date(start_date) and check_list_date(end_date)
 
     if total:
         return write_total(ens_files, abs_files, ens_means, analysis_str, variables, start_date, end_date, argv,
                                saved, full_saved, lon_centre=lon_centre, mask=mask, lon=lon, lat=lat,
-                                grid=grid, points_sample_grid=None, test=test)
+                                grid=grid, points_sample_grid=points_sample_grid, second_date_given=second_date_given,
+                           start_date2=start_date2, end_date2=end_date2, test=test)
 
     # Start and end date string
     start_end_str = str(start_date[2]) + "-" + str(start_date[1]) + "-" + str(start_date[0]) + " and " + \
@@ -49,9 +53,11 @@ def write_analysis_to_netcdf_file(ens_files, abs_files, ens_means, analysis_str,
 
     # Get folder to store ensemble means
     results = directories.ANALYSIS
-    mean_folder = os.path.join(results, directories.MEANS)
+    mean_folder = os.path.abspath(os.path.join(results, directories.MEANS))
+    if test:
+        mean_folder = mean_folder.replace("Adanna Akwataghibe", "Adanna")
 
-    if not analysis_str:
+    if not analysis_str and user_func is None:
         ens_means = ens_files
 
     # Go through ensembles, merge files to get output and write to output
@@ -62,8 +68,12 @@ def write_analysis_to_netcdf_file(ens_files, abs_files, ens_means, analysis_str,
             # Check if file name has 2 times in it
             if not get_file_two_years(ens_files[i][0]):
                 output_file = re.sub(str(start_date[2]), str(start_date[2]) + '_' + str(end_date[2]), ens_files[i][0])
+                if second_date_given:
+                    output_file = re.sub(str(start_date[2]), 'multi_model', ens_files[i][0])
             else:
                 output_file = re.sub(r'_(\d+)_(\d+)', '_' + str(start_date[2]) + '_' + str(end_date[2]), ens_files[i][0])
+                if second_date_given:
+                    output_file = re.sub(r'_(\d+)_(\d+)', '_multi_model', ens_files[i][0])
             # append start and end date to file name
             output_file = os.path.basename(os.path.normpath(output_file))
         else:
@@ -75,6 +85,8 @@ def write_analysis_to_netcdf_file(ens_files, abs_files, ens_means, analysis_str,
             output_file = output_file[:-3] + '_lc_' + str(lon_centre) + '.nc'
         if mask is not None:  # Add masked to the name
             output_file = output_file[:-3] + '_masked' + '.nc'
+        if user_func is not None:  # Add user function to the name
+            output_file = output_file[:-3] + '_' + user_func + '.nc'
 
         sample, nc_true, txt_true = False, False, False
         if lat and lon and not grid:
@@ -95,7 +107,7 @@ def write_analysis_to_netcdf_file(ens_files, abs_files, ens_means, analysis_str,
 
         # Combine each ensemble file into one
         times_append = xr.open_mfdataset(abs_files[i])
-        times_append.to_netcdf(output_file)
+        times_append.to_netcdf(path=output_file, mode='w')
 
         # Get global atrributes of file to use later
         glob_attrs = times_append.attrs
@@ -126,33 +138,19 @@ def write_analysis_to_netcdf_file(ens_files, abs_files, ens_means, analysis_str,
             coord.rename(lon_name)
             coord = cube_saved.coord("latitude")
             coord.rename(lat_name)
-            coord = cube_saved.coord("time")
-            coord.rename(time_name)
+            try:
+                coord = cube_saved.coord("time")
+                coord.rename(time_name)
+            except Exception:
+                pass
             # Convert cube to xarray
             converted_saved = xr.DataArray.from_iris(cube_saved)
             try:
-                converted_saved.to_netcdf(output_file, mode='a')
+                converted_saved.to_netcdf(path=output_file, mode='a')
             except Exception:
-                converted_saved.to_netcdf(output_file, mode='w')
+                converted_saved.to_netcdf(path=output_file, mode='w')
 
-            # If user function given, change analysis string
-            if user_func:
-                cube = ens_means[i][var]
-                # Convert to xarray
-                converted = xr.DataArray.from_iris(cube)
-                # Add analysis name to variable
-                new_name = converted.name + '_' + user_func
-                converted = converted.rename(new_name)
-                # Add new long name of file
-                try:
-                    new_long_name = converted.attrs['long_name'] + ' averaged between ' + start_end_str
-                except KeyError:
-                    new_long_name = var + ' averaged between ' + start_end_str
-                converted.attrs['long_name'] = new_long_name
-                # Append analysis to file
-                converted.to_netcdf(output_file, mode='a')
-
-            elif analysis_str:
+            if analysis_str:
                 # Save all analysis to file
                 for a in range(len(analysis_str)):
                     # Save analysis grid to file
@@ -162,8 +160,11 @@ def write_analysis_to_netcdf_file(ens_files, abs_files, ens_means, analysis_str,
                     coord.rename(lon_name)
                     coord = cube.coord("latitude")
                     coord.rename(lat_name)
-                    coord = cube.coord("time")
-                    coord.rename(time_name)
+                    try:  # Time may not always be here if we take the averages
+                        coord = cube.coord("time")
+                        coord.rename(time_name)
+                    except Exception:
+                        pass
                     # Convert to xarray
                     converted = xr.DataArray.from_iris(cube)
                     # Add analysis name to variable
@@ -172,14 +173,43 @@ def write_analysis_to_netcdf_file(ens_files, abs_files, ens_means, analysis_str,
                     # Add new long name of file
                     try:
                         new_long_name = converted.attrs['long_name'] + ' averaged between ' + start_end_str
+                        if second_date_given:
+                            new_long_name = converted.attrs['long_name'] + ' multi model average'
                     except KeyError:
                         new_long_name = var + ' averaged between ' + start_end_str
+                        if second_date_given:
+                            new_long_name = converted.attrs['long_name'] + ' multi model average'
                     converted.attrs['long_name'] = new_long_name
-                    # Append analysis to file
-                    try:
-                        converted.to_netcdf(output_file, mode='a')
-                    except Exception:
+
+                    if second_date_given:  # Write to new file
                         converted.to_netcdf(output_file, mode='w')
+                    else:
+                        # Append analysis to file
+                        try:
+                            converted.to_netcdf(path=output_file, mode='a')
+                        except Exception:
+                            converted.to_netcdf(path=output_file, mode='w')
+
+        # If user function given, change analysis string
+        if user_func:
+            cube = ens_means[i]
+            name = cube.name()
+            # Convert to xarray
+            converted = xr.DataArray.from_iris(cube)
+            # Add analysis name to variable
+            new_name = converted.name + '_' + user_func
+            converted = converted.rename(new_name)
+            # Add new long name of file
+            try:
+                new_long_name = converted.attrs['long_name'] + ' averaged between ' + start_end_str
+            except KeyError:
+                new_long_name = name + ' averaged between ' + start_end_str
+            converted.attrs['long_name'] = new_long_name
+            # Append analysis to file
+            try:
+                converted.to_netcdf(path=output_file, mode='a')
+            except Exception:
+                converted.to_netcdf(path=output_file, mode='w')
 
         # Global attributes
         dest = Dataset(output_file, 'a')
@@ -248,7 +278,8 @@ def write_analysis_to_netcdf_file(ens_files, abs_files, ens_means, analysis_str,
 
 def write_total(ens_files, abs_files, ens_means, analysis_str, variables, start_date, end_date, argv,
                                saved, full_saved, lon_centre=None, mask=None, lon=None, lat=None,
-                                grid=None, points_sample_grid=None, test=False):
+                                grid=None, points_sample_grid=None, second_date_given=False,
+                                  start_date2=None, end_date2=None, test=False):
     """
     Write analysis computed in netcdf files if ensembles calculated together
     :param ens_files: initial files arranged in ensemble order
@@ -268,6 +299,9 @@ def write_total(ens_files, abs_files, ens_means, analysis_str, variables, start_
     :param lat: latitude, set if grid or sample point, floats
     :param grid: set if grid point is given
     :param points_sample_grid: file (txt or nc) that contains sample or grid points
+    :param second_date_given: if set, multi model averages calculated
+    :param start_date2: second model start date
+    :param end_date2: second model end date
     :param test: if test is true, make some changes specific to files on my pc
     :return: None, files created in folder analysis/ensemble_means
     """
@@ -284,7 +318,9 @@ def write_total(ens_files, abs_files, ens_means, analysis_str, variables, start_
 
     # Get folder to store ensemble means
     results = directories.ANALYSIS
-    mean_folder = os.path.join(results, directories.MEANS)
+    mean_folder = os.path.abspath(os.path.join(results, directories.MEANS))
+    if test:
+        mean_folder = mean_folder.replace("Adanna Akwataghibe", "Adanna")
 
     ens_members = []
 
@@ -328,7 +364,7 @@ def write_total(ens_files, abs_files, ens_means, analysis_str, variables, start_
         else:
             output_file = output_file[:-3] + '_g_' + str(lat) + '_' + str(lon) + '.nc'
 
-    appended.to_netcdf(output_file)
+    appended.to_netcdf(path=output_file, mode='w')
 
     # Get global atrributes of file to use later
     glob_attrs = appended.attrs
@@ -363,9 +399,9 @@ def write_total(ens_files, abs_files, ens_means, analysis_str, variables, start_
         # Replace to original names
         xr_saved = xr_saved.rename(changed_names)
         try:
-            xr_saved.to_netcdf(output_file, mode='a')
+            xr_saved.to_netcdf(path=output_file, mode='a')
         except Exception:
-            xr_saved.to_netcdf(output_file, mode='w')
+            xr_saved.to_netcdf(path=output_file, mode='w')
 
         # If no analysis
         if not analysis_str:
@@ -377,14 +413,17 @@ def write_total(ens_files, abs_files, ens_means, analysis_str, variables, start_
                 coord.rename(lon_name)
                 coord = cube_saved.coord("latitude")
                 coord.rename(lat_name)
-                coord = cube_saved.coord("time")
-                coord.rename(time_name)
+                try:
+                    coord = cube_saved.coord("time")
+                    coord.rename(time_name)
+                except Exception:
+                    pass
                 # Convert cube to xarray
                 converted_saved = xr.DataArray.from_iris(cube_saved)
                 try:
-                    converted_saved.to_netcdf(output_file, mode='a')
+                    converted_saved.to_netcdf(path=output_file, mode='a')
                 except Exception:
-                    converted_saved.to_netcdf(output_file, mode='w')
+                    converted_saved.to_netcdf(path=output_file, mode='w')
 
         else:
             # Save all analysis to file
@@ -406,11 +445,21 @@ def write_total(ens_files, abs_files, ens_means, analysis_str, variables, start_
                 # Add new long name of file
                 try:
                     new_long_name = converted.attrs['long_name'] + ' averaged between ' + start_end_str
+                    if second_date_given:
+                        new_long_name = converted.attrs['long_name'] + ' multi model average'
                 except KeyError:
                     new_long_name = var + ' averaged between ' + start_end_str
+                    if second_date_given:
+                        new_long_name = converted.attrs['long_name'] + ' multi model average'
                 converted.attrs['long_name'] = new_long_name
-                # Append analysis to file
-                converted.to_netcdf(output_file, mode='a')
+                if second_date_given:  # Write to new file
+                    converted.to_netcdf(path=output_file, mode='w')
+                else:
+                    # Append analysis to file
+                    try:
+                        converted.to_netcdf(path=output_file, mode='a')
+                    except Exception:
+                        converted.to_netcdf(path=output_file, mode='w')
 
     # Global attributes
     dest = Dataset(output_file, 'a')

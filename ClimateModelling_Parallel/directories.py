@@ -1,6 +1,6 @@
 
 # The directories we use to store data, input and the analysis data
-CLIMATE_DATA = "DATA"
+DATA = "DATA"
 INPUT = "INPUT"
 ANALYSIS = "RESULTS"
 MEANS = "ensemble_averages"
