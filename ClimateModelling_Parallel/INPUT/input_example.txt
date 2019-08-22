@@ -16,7 +16,7 @@ End date of analysis: 1954
 Analysis: mean
 Spatial: True
 Total ensemble stats: True
-Plot:
+Plot: 1
 Monthly: False
 Grid:
 Sample:

@@ -375,7 +375,7 @@ def convert_cftime_datetime(cftime_date):
     """
 
     # Convert cftime date to string
-    cftime_date_str = cftime_date.strftime()
+    cftime_date_str = cftime_date.strftime("%Y-%m-%d")
 
     # Get only base date (with no time)
     date_str = get_date_from_cftime(cftime_date_str)
