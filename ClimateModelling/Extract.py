@@ -257,8 +257,8 @@ class Extract:
         if sp and not self.grid:
             sample = True
 
-        # Only once
-        dr = False
+        # Only once, dim_coords
+        dr, dim_coords = False, {}
 
         # Get day, month and year
         day_s, mon_s, yr_s = self.start_date[0], self.start_date[1], self.start_date[2]
@@ -296,8 +296,8 @@ class Extract:
             # save in ens_files
             abs_files[ens_indx].append(joined)
 
-        # Get exact indices of start and end date
-        till_start, till_end = get_diff_start_end(self.start_date, self.end_date, min_yr=min_yr, monthly=self.monthly)
+        # Get corrct start and end positions
+        till_start, till_end, set_day = None, None, False
 
         # Save names of latitude, longitude, depth or time
         time_name, lat_name, lon_name = None, None, None
@@ -327,7 +327,28 @@ class Extract:
 
                 # Select time period in dataset
                 try:
-                    time_selected = datasets[var][dict(time=slice(till_start, till_end))]
+                    if 'time' in datasets[var].coords:
+                        if not set_day:
+                            if not self.monthly:
+                                days = datasets.coords['time'].dt.dayofyear
+                                num_leap_years = len(days[days == 366])
+                                # Get exact indices of start and end date
+                            till_start, till_end = get_diff_start_end(self.start_date, self.end_date, min_yr=min_yr,
+                                                                      monthly=self.monthly,
+                                                                      num_leap_year_input=num_leap_years)
+                            set_day = True
+                        time_selected = datasets[var][dict(time=slice(till_start, till_end))]
+                    elif 't' in datasets[var].coords:
+                        if not set_day:
+                            if not self.monthly:
+                                days = datasets.coords['t'].dt.dayofyear
+                                num_leap_years = len(days[days == 366])
+                                # Get exact indices of start and end date
+                            till_start, till_end = get_diff_start_end(self.start_date, self.end_date, min_yr=min_yr,
+                                                                      monthly=self.monthly,
+                                                                      num_leap_year_input=num_leap_years)
+                            set_day = True
+                        time_selected = datasets[var][dict(t=slice(till_start, till_end))]
                 except Exception:
                     time_selected = datasets[var]
                 # Convert to cube
@@ -336,29 +357,38 @@ class Extract:
                 if not dr:
                     # Get names of longitude and latitude variables
                     for c in cube.coords():
-                        dd = c.name()
+                        dd = c.var_name
                         not_bnds = 'bound' not in dd and 'bnd' not in dd
                         if not_bnds:
                             if dd.lower() == 't' or dd.lower() == 'time':
-                                time_name = dd
+                                time_name = c.name()
+                                dim_coords['time'] = time_name
                             elif dd[0].lower() == 'y' or 'lat' in dd.lower() or 'latitude' in dd.lower():
-                                lat_name = dd
+                                lat_name = c.name()
+                                dim_coords['latitude'] = lat_name
                             elif dd[0].lower() == 'x' or 'lon' in dd.lower() or 'longitude' in dd.lower():
-                                lon_name = dd
+                                lon_name = c.name()
+                                dim_coords['longitude'] = lon_name
                             else:  # 3D data
-                                depth_name = dd
+                                depth_name = c.name()
+                                dim_coords['depth'] = depth_name
                     dr = True
 
                 # Rename coords
-                coord = cube.coord(lon_name)
-                coord.rename(const_lon_name)
-                coord = cube.coord(lat_name)
-                coord.rename(const_lat_name)
                 try:
-                    coord = cube.coord(time_name)
-                    coord.rename(const_time_name)
+                    if lon_name is not None and lat_name is not None:
+                        coord = cube.coord(lon_name)
+                        coord.rename(const_lon_name)
+                        coord = cube.coord(lat_name)
+                        coord.rename(const_lat_name)
                 except Exception:
-                    pass
+                    print("WARNING in function extract_data: No longitude and latitude coordinate found.")
+                try:
+                    if time_name is not None:
+                        coord = cube.coord(time_name)
+                        coord.rename(const_time_name)
+                except Exception:
+                    print("WARNING in function extract_data: No time coordinate found.")
 
                 # Calculate areas
                 if self.calc_areas:
@@ -366,7 +396,11 @@ class Extract:
                     self.calc_areas = False
 
                 # Get longitude and latitude
-                lons, lats = cube.coord(const_lon_name).points, cube.coord(const_lat_name).points
+                lons, lats = None, None
+                try:
+                    lons, lats = cube.coord(const_lon_name).points, cube.coord(const_lat_name).points
+                except Exception:
+                    pass
 
                 # Centre to new longitude centre
                 if self.lon_centre is not None:
@@ -509,4 +543,4 @@ class Extract:
 
         print("function extract_data: Data successfully extracted from files.")
 
-        return saved, ens_files, abs_files, orig_saved
+        return saved, ens_files, abs_files, orig_saved, dim_coords

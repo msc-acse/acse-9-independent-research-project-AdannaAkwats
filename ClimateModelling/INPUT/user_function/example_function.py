@@ -7,15 +7,15 @@ file_name = example_function
 func_name = simple_equation
 """
 
-def simple_equation(data):
+def simple_equation(cube):
     """
     Perform simple arithmetic with variables
-    :param data: a dictionary of variables and their data
+    :param data: a dictionary of variables and their data (iris.cube)
     :return: result of equation, name of results, unit
     """
 
     # Perform equation wirh temperature and salinity
-    result = data['temp_mean'].data * 2 + data['sal_mean'].data * 100
+    result = cube['temp_mean'].data * 2 + cube['sal_mean'].data * 100
     name = 'result'
     long_name = 'result calculated using simple equation'
     unit = 'K'
@@ -23,7 +23,7 @@ def simple_equation(data):
     return result, name, long_name, unit
 
 
-def difference_temp(data):
+def difference_temp(cube):
     """
     Perform simple arithmetic with variables
     :param data: a dictionary of variables and their data
@@ -31,7 +31,7 @@ def difference_temp(data):
     """
 
     # Perform equation wirh temperature and salinity
-    result = data['temp_mean'].data[0] - data['temp_mean'].data[5]
+    result = cube['temp_mean'].data[0] - cube['temp_mean'].data[5]
     name = 'diff_temp'
     long_name = 'difference of temperature calculated using difference_temp'
     unit = 'K'
