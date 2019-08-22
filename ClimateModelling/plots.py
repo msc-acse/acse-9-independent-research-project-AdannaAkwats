@@ -449,34 +449,38 @@ def create_timeseries(list_ens, start_date, end_date, variables,  monthly=False,
             print("Timeseries data is saved in the " + directories.ANALYSIS + " folder as a txt file.")
 
         if plot:
+            num_years = len(np.unique(indx.year))
             # Plot the timeseries
-            fig, axs = plt.subplots(2, 1)
-            plt.tight_layout()
+            fig, axs = plt.subplots(1, 1)
             # Timeseries
-            df.plot(ax=axs[0], title=title_name, grid=True, legend=False, alpha=0.7, color='m', ls='-')
-            df.resample('BM').mean().plot(ax=axs[0], style='--')
+            df.plot(ax=axs, title=title_name, grid=True, legend=False, alpha=0.7, color='m', ls='-')
+            if not monthly:
+                df.resample('BM').mean().plot(ax=axs, style='-')
             rolling_str = 'one-year rolling mean'
-            if monthly:
-                df.rolling(12, center=True).mean().plot(ax=axs[0], style=':')
-            else:
-                df.rolling(365, center=True).mean().plot(ax=axs[0], style=':')
-            axs[0].legend(['input', 'monthly mean', rolling_str], loc='upper left')
-            axs[0].set_xlabel("Time (month/year)")
-            axs[0].set_ylabel(cube.name())
+
+            if num_years > 3:
+                if monthly:
+                    df.rolling(12).mean().plot(ax=axs, style='-')
+                else:
+                    df.rolling(365).mean().plot(ax=axs, style='-')
+            if not monthly and num_years > 3:
+                axs.legend(['input', 'monthly mean', rolling_str], loc='upper left')
+            elif monthly and num_years > 3:
+                axs.legend(['input', rolling_str], loc='upper left')
+            elif num_years <= 2 and monthly:
+                axs.legend(['input'], loc='upper left')
+            elif num_years <= 2:
+                axs.legend(['input', 'monthly mean'], loc='upper left')
+            axs.set_xlabel("Time (month/year)")
+            axs.set_ylabel(cube.name())
 
             # Boxplot - Yearly seasonality
+            fig, axs1 = plt.subplots(1, 1)
             df['Month'] = df.index.month
-            sns.boxplot(ax=axs[1], data=df, x='Month', y=variable)
-            axs[1].set_title("Yearly seasonality of " +cube.name())
-            axs[1].set_xlabel("Months")
-            axs[1].set_ylabel(cube.name())
-
-            # Boxplot - Weekly seasonality
-            # df['Weekday name'] = df.index.weekday_name
-            # sns.boxplot(ax=axs[2], data=df, x='Weekday name', y=variable)
-            # axs[2].set_title("Weekly seasonality of " + cube.name())
-            # axs[2].set_xlabel("Days")
-            # axs[2].set_ylabel(cube.name())
+            sns.boxplot(ax=axs1, data=df, x='Month', y=variable)
+            axs1.set_title("Yearly seasonality of " + cube.name())
+            axs1.set_xlabel("Months")
+            axs1.set_ylabel(cube.name())
 
             if save_out:
                 plt.savefig(os.path.join(directories.ANALYSIS, file_name))
@@ -536,6 +540,7 @@ def create_timeseries_helper(cube, variable, start_date, end_date, time_str, mon
     if plot:
         # Construct figure and axes
         sns.set(rc={'figure.figsize': (11, 4)})
+        num_years = len(np.unique(indx.year))
         # Plot the timeseries
         if second_date_given:
             fig, axs = plt.subplots(1, 1)
@@ -549,14 +554,20 @@ def create_timeseries_helper(cube, variable, start_date, end_date, time_str, mon
             if not monthly:
                 df.resample('BM').mean().plot(ax=axs, style='-')
             rolling_str = 'one-year rolling mean'
-            if monthly:
-                df.rolling(12).mean().plot(ax=axs, style='-')
-            else:
-                df.rolling(365, center=True).mean().plot(ax=axs, style='-')
-            if not monthly:
+
+            if num_years > 3:
+                if monthly:
+                    df.rolling(12).mean().plot(ax=axs, style='-')
+                else:
+                    df.rolling(365).mean().plot(ax=axs, style='-')
+            if not monthly and num_years > 3:
                 axs.legend(['input', 'monthly mean', rolling_str], loc='upper left')
-            else:
+            elif monthly and num_years > 3:
                 axs.legend(['input', rolling_str], loc='upper left')
+            elif num_years <= 2 and monthly:
+                axs.legend(['input'], loc='upper left')
+            elif num_years <= 2:
+                axs.legend(['input', 'monthly mean'], loc='upper left')
             axs.set_xlabel("Time (month/year)")
             axs.set_ylabel(cube.name())
 
