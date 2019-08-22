@@ -1,199 +1,34 @@
 ﻿# User input for Climate Modelling Diagnostics Program
 #
-#
-# FILENAMES OF DATA FORMAT
-# ------------------------------------------------------------------------------
-# The filenames should be in the format:
-#       "{START OF FILENAME}_ens{NUM}_{YEAR}.nc"
-#  where
-#  - {START OF FILENAME} is the prefix of the file, this can be the algae type.
-#  - {NUM} is the ensemble number
-#  - {YEAR} is the year.
-#
-#  OR if you have multiple years stored in one file then:
-#
-#  The filenames should be in the format:
-#        "{START OF FILENAME}_ens{NUM}_{YEAR 1}_{YEAR 2}.nc"
-#  where
-#  - {START OF FILENAME} is the prefix of the file, this can be the algae type.
-#   - {NUM} is the ensemble number
-#  - {YEAR 1} and {YEAR 2} are the start and end year of the data in the file.
-#
-#
-# NOTES
-# ------------------------------------------------------------------------------
-# ASSUMPTIONS
-# ------------
-#    - Files do not have overlapped data.
-#    - Daily increments of data, except if the monthly tag is set in the arguments.
-#    - Grids have constant latitude and longitude.
-# ------------
-#    - Some example files are in the data folder.
-#
-#
 # ----------------- PLEASE FILL IN THE ARGUMENTS LISTED BELOW ------------------
 #
 # REQUIRED ARGUMENTS
 # ------------------------------------------------------------------------------
-Prefix: dic_deltap
-Start date of analysis: 1953
-Variables: dic_deltap
-Number of ensembles: 2
+Prefix: ccb_Amon_CNRM-CM6-1_highresSST-present_r1i1p1f2_gr
+Start date of analysis: 1950
+Variables: ccb
+Number of ensembles: 1
 #
 # ------------------------------------------------------------------------------
 # OPTIONAL ARGUMENTS
 # ------------------------------------------------------------------------------
-End date of analysis: 1954
+End date of analysis: 2014
 Analysis: mean
+Spatial: True
 Total ensemble stats: False
 Plot: 1
-Monthly: False
+Monthly: True
 Grid:
 Sample:
 Mask file:
 Save Output: True
 Covary:
-Histogram bin selection: fd
+Histogram bin selection: 10
 Longitude centre:
-Save extract data:
 User function:
 Calculate areas:
 Calculate index:
 #
-#
 # ------------------------------------------------------------------------------
-# HELP
+# HELP : Found in the UserGuide
 # ------------------------------------------------------------------------------
-# REQUIRED ARGUMENTS
-# ------------------------------------------------------------------------------
-# Prefix : This is the prefix of the file. This can be the type of algae
-# e.g. dic_deltap, fndet_100, jprod_ndi_100.
-# ------
-# Start date of analysis: Can be in the following formats:
-#    YYYY-MM-DD : e.g. 2020-04-12
-#    YYYY-MM    : e.g. 2020-04
-#    YYYY       : e.g. 2020
-#    - If day is not given, the 1st of the given month will be used
-#      i.e. 2020-04 => 2020-04-01
-#    - If day and month is not given, 1st Jan will be used as the start date
-#      i.e. 2020 => 2020-01-01
-# ------
-# Variables: Variables of data to analyse
-# ------
-# Number of ensembles: The number of ensembles of the data.
-# ------------------------------------------------------------------------------
-# OPTIONAL ARGUMENTS
-# ------------------------------------------------------------------------------
-# End date of analysis: Same format as start date of analysis
-#   If end date not given:
-#   - If only start year is given, the end date is automatically set to the
-#     31 Dec of start year
-#   - If start year and month is given, then end date is set to the end of
-#     the start month
-#   If end date given:
-#   - If day is not given, the end of the given month will be used
-#     i.e. 2020-04 => 2020-04-30
-#   - If day and month is not given, 31 Dec will be used as the end date
-#     i.e. 2020 => 2020-12-31
-# ------
-# Analysis: Analysis performed on data set.
-#    If not specified, then mean will be performed.
-#    Types of analysis that can be selected:
-#    - mean
-#    - std (Standard deviation)
-#    - rms (Root mean squared error)
-#    - median
-#    You can also select a combination of analysis to perform e.g. Analysis: mean, rms
-# ------
-# Total ensemble stats: True/False : The analysis will be performed over the whole ensemble given.
-#    If set True, all the ensembles will be averaged as a collection.
-#    If set False, the ensembles will be averaged individually.
-# ------
-# Plot: Ensemble number : Plot map, histogram and timeseries graphs given specific ensemble to plot
-#   E.g. --plot 1
-#   The ensemble number must be > 0.
-#   Note: If 'Total ensemble stats' is set, when plotting map, averages across all ensembles are plotted.
-# ------
-# Monthly: Set to True if data in file is stored in monthly increments,
-#          otherwise daily increments is assumed.
-# ------
-# Grid Point: Latitude, Longitude
-#        Uses grid point that latitude and longitude lies in.
-#        Other commands:
-#        - You can define a list of grid points in a .txt file e.g check INPUT/sample_points.txt
-#           - Grid Point: sample_points.txt
-#        - You can regrid to a grid (using nearest neighbour interpolation) defined in a NETCDF file:
-#           - Grid Point: example_file.nc
-#        Cannot be used in conjunction with sample point.
-# ------
-# Sample Point: Latitude, Longitude
-#        - Uses sample point given by latitude and longitude using interpolation.
-#        Other commands:
-#        - You can define a list of sample points in a .txt file e.g check INPUT/sample_points.txt and call
-#           - Sample Point: sample_points.txt
-#        - You can regrid to a grid (using linear interpolation) defined in a NETCDF file:
-#           - Sample Point: example_file.nc
-#        Cannot be used in conjunction with grid point.
-# ------
-# Mask file: Uses masking grid given as a file. Contains description of
-#             multiple polygons. An example file is given in mask_example.txt
-# ------
-# Save output: True/False: Save data output of histogram and timeseries
-# ------
-# Covary: True/False: Perform covariance analysis on the variables.
-# ------
-# Histogram bin selection: Way of choosing the number of bins using in the
-#    histogram. The default = fd, the Freedman Diaconis Estimator.
-#    List of choices:
-#    ---------------
-#    fd      - Freedman Diaconis Estimator
-#    sturges - R’s default method, only accounts for data size.
-#    auto    - Maximum of the sturges and fd estimators.
-#    doane   - An improved version of Sturges estimator that works better with
-#              non-normal datasets.
-#    scott   - Less robust estimator that that takes into account data variability
-#              and data size.
-#    stone   - Estimator based on leave-one-out cross-validation estimate of the
-#              integrated squared error.
-#    rice    - Estimator does not take variability into account, only data size.
-#    sqrt    - Square root (of data size) estimator
-# For more detailed explanations, go to:
-# https://docs.scipy.org/doc/numpy/reference/generated/numpy.histogram_bin_edges.html#numpy.histogram_bin_edges
-#
-#  If you want to specify the bin edges used in the histogram, you can input the file - an example file is given in
-#  histogram_bins.txt
-# ------
-# Longitude centre: Centre
-#        Longitude to centre map on.
-# ------
-# Save extract data: True/False: Save iris cubes from ensembles into a pickle file.
-# ------
-# User function: File name, Function name
-#       Use function written by the user and stored in user_function folder for analysis.
-#              file_name : name of file that contains function in user_function folder
-#              function_name : name of function to call
-#       Note: user functions are expected to only take in a cube as an argument. An example of a function
-#             can be found in user_function/example_function.py
-# ------
-# Calculate areas: True/False: Calculate areas of grid boxes of latitude and longitude and saves to
-#       NetCDF file areas.nc in results folder.
-# ------
-# Caculate index: index
-#        Calculate the index given
-#        The control run is the FIRST file prefix set and the corresponding start/end date.
-#        The future run is the SECOND file prefix set and the corresponding second start/end date
-#        Types of inidices that can be calculated:
-#        enso : The Oceanic Niño Index (ONI)
-#        nino12 : Niño 1+2 Index
-#        nino4 : Niño 4 Index
-#        tni : The Trans-Niño Index (TNI)
-#        iod : Indian Ocean Dipole (IOD) Mode Index
-#        amo : Atlantic Multidecadal Oscillation (AMO) Index
-#        pdo : Pacific Decadal Oscillation (PDO) Index
-#        ao : Arctic Oscillation (AO; Northern Annular Mode) Index
-#        aao : Antarctic Oscillation (AAO; Southern Annular Mode) Index
-#        nao : North Atlantic Oscillation (NAO) Index
-# ------
-
-
-

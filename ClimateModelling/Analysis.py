@@ -14,7 +14,6 @@ class Analysis:
     def calculate_avg_ensembles(self, analysis):
         """
         Averages all ensembles into one ensembles if no analysis given
-        :param list_ens: the list of ensembles (dicts) containing the data of the climate variables
         :param analysis: should be False
         :return:
            ens_calcs:
@@ -26,7 +25,7 @@ class Analysis:
         assert self.list_ens is not None
         assert analysis is False
 
-        nan_indices, indices_filled = None, False
+        nan_indices = {}
 
         # Get variables from one ensemble
         variables = list(self.list_ens[0])
@@ -54,14 +53,12 @@ class Analysis:
 
             dict_vars[var] = cube
             # Get nan indices
-            if not indices_filled:
-                if np.ma.is_masked(cube.data):
-                    x = cube.data.filled()
-                    nan_indices = np.argwhere(np.isclose(x.flatten().data, cube.data.fill_value))
-                else:
-                    nan_indices = np.argwhere(np.isnan(cube.data.flatten().data))
-                break
-                indices_filled = True
+            if np.ma.is_masked(cube.data):
+                x = cube.data.filled()
+                nan_indices[var] = np.argwhere(np.isclose(x.flatten().data, cube.data.fill_value))
+            else:
+                nan_indices[var] = np.argwhere(np.isnan(cube.data.flatten().data))
+            break
         ens_calcs.append(dict_vars)
 
         print("function calculate_avg_ensembles: Averages of data successfully computed.")
@@ -75,28 +72,28 @@ class Analysis:
         :param list_ens: list of ensembles
         :return: list of indices where cube is nan
         """
-        nan_indices = None
+        nan_indices = {}
 
         # Get variables from one ensemble
         variables = list(self.list_ens[0])
 
         # Get nan indices
-        cube = self.list_ens[0][variables[0]]
-        for s in cube.slices_over('time'):
-            if np.ma.is_masked(s.data):
-                x = s.data.filled()
-                nan_indices = np.argwhere(np.isclose(x.flatten().data, s.data.fill_value))
-            else:
-                nan_indices = np.argwhere(np.isnan(s.data.flatten().data))
-            break
-
+        for var in variables:
+            cube = self.list_ens[0][var]
+            for s in cube.slices_over('time'):
+                if np.ma.is_masked(s.data):
+                    x = s.data.filled()
+                    nan_indices[var] = np.argwhere(np.isclose(x.flatten().data, s.data.fill_value))
+                else:
+                    nan_indices[var] = np.argwhere(np.isnan(s.data.flatten().data))
+                break
         return nan_indices
 
 
-    def compute_total_stats_analysis(self, analysis, nan_indices, ens_calcs):
+    def compute_total_stats_analysis(self, analysis, nan_indices, spatial, ens_calcs):
         """
         Analyse the data given - in this case it computes the mean, std, median and rms
-        :param list_ens: the list of ensembles (dicts) containing the data of the climate variables
+        :param ens_calcs: the list of averaged ensembles (dicts) containing the data of the climate variables
         :param analysis: type of computation
         :param total: if total set, then analyse all ensembles together, else separately, boolean
         :return:
@@ -104,7 +101,7 @@ class Analysis:
                 - averages of ensembles together (if total)
            string : type of analysis computed
            list: nan indices
-           """
+        """
         # Assertions
         assert self.list_ens is not None
 
@@ -119,11 +116,12 @@ class Analysis:
                 av_cube = each_a[0]
                 each_a_data = [t[j][v].data for t in ens_calcs]
                 av = np.mean(each_a_data, axis=0)
-                shape = av.shape
-                av_flat = av.flatten()
-                np.put(av_flat, nan_indices, np.nan)
-                av_flat = av_flat.reshape(shape)
-                av = av_flat
+                if not spatial:
+                    shape = av.shape
+                    av_flat = av.flatten()
+                    np.put(av_flat, nan_indices[v], np.nan)
+                    av_flat = av_flat.reshape(shape)
+                    av = av_flat
                 # Get cube and change the data to total averages
                 av_cube.data = av
 
@@ -166,18 +164,16 @@ class Analysis:
         return analysis_new_order
 
 
-    def compute_stats_analysis(self, analysis, total=False):
+    def compute_stats_analysis(self, analysis, total=False, spatial=False, dim_coords=None):
         """
         Analyse the data given - in this case it computes the mean, std, median and rms
         :param list_ens: the list of ensembles (dicts) containing the data of the climate variables
         :param analysis: type of computation
         :param total: if total set, then analyse all ensembles together, else separately, boolean
-        :return:
-           ens_means:
-                - averages of ensembles together (if total)
-                - list of averages of the different ensembles (if not total)
-           string : type of analysis computed
-           """
+        :param spatial: set if spatial avergaes will be calculated
+        :param dim_coords: dictionary containing original (long) names of dimensions
+        :return: average, nan_indices, analysis
+        """
         # Assertions
         assert self.list_ens is not None
 
@@ -195,6 +191,14 @@ class Analysis:
         analysis = self.reorder_analysis_str(analysis)
 
         time_name = 'time'
+        # If spatial, then get dim names
+        spatial_names = None
+        if spatial:
+            if len(dim_coords) == 3:
+                spatial_names = ['latitude', 'longitude']
+            else:
+                spatial_names = ['latitude', 'longitude', dim_coords['depth']]
+
         # Holds the means for each ensemble
         ens_calcs = []
         for dict_ in self.list_ens:
@@ -204,16 +208,32 @@ class Analysis:
             for d in dict_:
                 for a in analysis:
                     if a == 'mean':
-                        mean_calc = dict_[d].collapsed(time_name, iris.analysis.MEAN, mdtol=0)
+                        mean_calc = None
+                        if spatial:
+                            mean_calc = dict_[d].collapsed(spatial_names, iris.analysis.MEAN, mdtol=0)
+                        else:
+                            mean_calc = dict_[d].collapsed(time_name, iris.analysis.MEAN, mdtol=0)
                         mean_calcs[d] = mean_calc
                     if a == 'std':
-                        std_calc = dict_[d].collapsed(time_name, iris.analysis.STD_DEV, mdtol=0)
+                        std_calc = None
+                        if spatial:
+                            std_calc = dict_[d].collapsed(spatial_names, iris.analysis.STD_DEV, mdtol=0)
+                        else:
+                            std_calc = dict_[d].collapsed(time_name, iris.analysis.STD_DEV, mdtol=0)
                         std_calcs[d] = std_calc
                     if a == 'median':
-                        median_calc = dict_[d].collapsed(time_name, iris.analysis.MEDIAN, mdtol=0)
+                        median_calc = None
+                        if spatial:
+                            median_calc = dict_[d].collapsed(spatial_names, iris.analysis.MEDIAN, mdtol=0)
+                        else:
+                            median_calc = dict_[d].collapsed(time_name, iris.analysis.MEDIAN, mdtol=0)
                         median_calcs[d] = median_calc
                     if a == 'rms':
-                        rms_calc = dict_[d].collapsed(time_name, iris.analysis.RMS, mdtol=0)
+                        rms_calc = None
+                        if spatial:
+                            rms_calc = dict_[d].collapsed(spatial_names, iris.analysis.RMS, mdtol=0)
+                        else:
+                            rms_calc = dict_[d].collapsed(time_name, iris.analysis.RMS, mdtol=0)
                         rms_calcs[d] = rms_calc
             calcs = []
             if 'mean' in analysis:
@@ -228,7 +248,7 @@ class Analysis:
 
             # Find ensembles average
         if total:
-            return self.compute_total_stats_analysis(analysis, nan_indices, ens_calcs)
+            return self.compute_total_stats_analysis(analysis, nan_indices, spatial, ens_calcs)
 
         print("function compute_stats_analysis: Averages of data successfully computed.")
 
@@ -241,7 +261,6 @@ class Analysis:
         :param list_ens: the list of ensembles (dicts) containing the data of the climate variables
         :param file_name: name of python script where function is
         :param func_name: name of function to call
-        :param args: other arguments (excluding cube)
         :return: analysed data of each variable and ensemble
         """
         # Assertions
@@ -280,18 +299,16 @@ class Analysis:
         return ens_calcs
 
 
-    def calc_stats_difference(self, list_ens2, analysis, total=False):
+    def calc_stats_difference(self, list_ens2, analysis, total=False, spatial=False, dim_coords=None):
         """
         Calculate multi model analysis between models list_ens and list_ens2
         :param list_ens: the list of ensembles of 1st model(dicts) containing the data of the climate variables
         :param list_ens: the list of ensembles od 2nd model (dicts) containing the data of the climate variables
         :param analysis: type of computation
         :param total: if total set, then analyse all ensembles together, else separately, boolean
-        :return:
-           ens_means:
-                - averages of ensembles together (if total)
-                - list of averages of the different ensembles (if not total)
-           string : type of analysis computed
+        :param spatial: set if spatial avergaes will be calculated
+        :param dim_coords: dictionary containing original (long) names of dimensions
+        :return: average difference, individual average (if spatial set), nan_indices, analysis
         """
 
         # Assertions
@@ -311,87 +328,113 @@ class Analysis:
         analysis = self.reorder_analysis_str(analysis)
 
         time_name = 'time'
+
+        # If spatial, then get dim names
+        spatial_names = None
+        if spatial:
+            if len(dim_coords) == 3:
+                spatial_names = ['latitude', 'longitude']
+            else:
+                spatial_names = ['latitude', 'longitude', dim_coords['depth']]
+
         # Holds the means for each ensemble
-        ens_calcs = []
+        ens_calcs, spat_calcs, spat_calcs2 = [], [], []
         for i in range(len(self.list_ens)):
             dict_ = self.list_ens[i]
             dict2_ = list_ens2[i]
             # Used only if we analyse all at the same time
             mean_calcs, std_calcs, median_calcs, rms_calcs = {}, {}, {}, {}
+            mean_sp, std_sp, median_sp, rms_sp = {}, {}, {}, {}
+            mean_sp2, std_sp2, median_sp2, rms_sp2 = {}, {}, {}, {}
             # Calculate the mean of each variable in the dictionary given
             for d in dict_:
                 for a in analysis:
+                    calc, calc2, abs_diff_cube = None, None, None
                     if a == 'mean':
-                        calc = dict_[d].collapsed(time_name, iris.analysis.MEAN)
-                        calc2 = dict2_[d].collapsed(time_name, iris.analysis.MEAN)
-                        abs_diff_cube = iam.abs(iam.subtract(calc, calc2))
-                        # Update attributes of abs_diff_cube
-                        abs_diff_cube.standard_name = calc.standard_name
-                        abs_diff_cube.var_name = calc.var_name
-                        abs_diff_cube.long_name = calc.long_name
-                        abs_diff_cube.units = calc.units
-                        abs_diff_cube.attributes = calc.attributes
-                        mean_calcs[d] = abs_diff_cube
+                        if spatial:
+                            calc = dict_[d].collapsed(spatial_names, iris.analysis.MEAN)
+                            calc2 = dict2_[d].collapsed(spatial_names, iris.analysis.MEAN)
+                            mean_sp[d] = calc
+                            mean_sp2[d] = calc2
+                        else:
+                            calc = dict_[d].collapsed(time_name, iris.analysis.MEAN)
+                            calc2 = dict2_[d].collapsed(time_name, iris.analysis.MEAN)
+                        sub_cube = np.subtract(calc.data, calc2.data)
+                        abs_diff_cube = np.abs(sub_cube)
+                        calc.data = abs_diff_cube
+                        mean_calcs[d] = calc
                     if a == 'std':
-                        calc = dict_[d].collapsed(time_name, iris.analysis.STD_DEV)
-                        calc2 = dict2_[d].collapsed(time_name, iris.analysis.STD_DEV)
-                        abs_diff_cube = iam.abs(iam.subtract(calc, calc2))
-                        # Update attributes of abs_diff_cube
-                        try:
-                            abs_diff_cube.standard_name = calc.standard_name
-                        except Exception:
-                            pass
-                        abs_diff_cube.var_name = calc.var_name
-                        abs_diff_cube.long_name = calc.long_name
-                        abs_diff_cube.units = calc.units
-                        abs_diff_cube.attributes = calc.attributes
-                        std_calcs[d] = abs_diff_cube
+                        if spatial:
+                            calc = dict_[d].collapsed(spatial_names, iris.analysis.STD_DEV)
+                            calc2 = dict2_[d].collapsed(spatial_names, iris.analysis.STD_DEV)
+                            std_sp[d] = calc
+                            std_sp2[d] = calc2
+                        else:
+                            calc = dict_[d].collapsed(time_name, iris.analysis.STD_DEV)
+                            calc2 = dict2_[d].collapsed(time_name, iris.analysis.STD_DEV)
+                        sub_cube = np.subtract(calc.data, calc2.data)
+                        abs_diff_cube = np.abs(sub_cube)
+                        calc.data = abs_diff_cube
+                        std_calcs[d] = calc
                     if a == 'median':
-                        calc = dict_[d].collapsed(time_name, iris.analysis.MEDIAN)
-                        calc2 = dict2_[d].collapsed(time_name, iris.analysis.MEDIAN)
-                        abs_diff_cube = iam.abs(iam.subtract(calc, calc2))
-                        # Update attributes of abs_diff_cube
-                        try:
-                            abs_diff_cube.standard_name = calc.standard_name
-                        except Exception:
-                            pass
-                        abs_diff_cube.var_name = calc.var_name
-                        abs_diff_cube.long_name = calc.long_name
-                        abs_diff_cube.units = calc.units
-                        abs_diff_cube.attributes = calc.attributes
-                        median_calcs[d] = abs_diff_cube
+                        if spatial:
+                            calc = dict_[d].collapsed(spatial_names, iris.analysis.MEDIAN)
+                            calc2 = dict2_[d].collapsed(spatial_names, iris.analysis.MEDIAN)
+                            median_sp[d] = calc
+                            median_sp2[d] = calc2
+                        else:
+                            calc = dict_[d].collapsed(time_name, iris.analysis.MEDIAN)
+                            calc2 = dict2_[d].collapsed(time_name, iris.analysis.MEDIAN)
+                        sub_cube = np.subtract(calc.data, calc2.data)
+                        abs_diff_cube = np.abs(sub_cube)
+                        calc.data = abs_diff_cube
+                        median_calcs[d] = calc
                     if a == 'rms':
-                        calc = dict_[d].collapsed(time_name, iris.analysis.RMS)
-                        calc2 = dict2_[d].collapsed(time_name, iris.analysis.RMS)
-                        abs_diff_cube = iam.abs(iam.subtract(calc, calc2))
-                        # Update attributes of abs_diff_cube
-                        try:
-                            abs_diff_cube.standard_name = calc.standard_name
-                        except Exception:
-                            pass
-                        abs_diff_cube.var_name = calc.var_name
-                        abs_diff_cube.long_name = calc.long_name
-                        abs_diff_cube.units = calc.units
-                        abs_diff_cube.attributes = calc.attributes
-                        rms_calcs[d] = abs_diff_cube
-            calcs = []
+                        if spatial:
+                            calc = dict_[d].collapsed(spatial_names, iris.analysis.RMS)
+                            calc2 = dict2_[d].collapsed(spatial_names, iris.analysis.RMS)
+                            rms_sp[d] = calc
+                            rms_sp2[d] = calc2
+                        else:
+                            calc = dict_[d].collapsed(time_name, iris.analysis.RMS)
+                            calc2 = dict2_[d].collapsed(time_name, iris.analysis.RMS)
+                        sub_cube = np.subtract(calc.data, calc2.data)
+                        abs_diff_cube = np.abs(sub_cube)
+                        calc.data = abs_diff_cube
+                        rms_calcs[d] = calc
+            calcs, c_sp, c_sp2 = [], [], []
             if 'mean' in analysis:
                 calcs.append(mean_calcs)
+                if spatial:
+                    c_sp.append(mean_sp)
+                    c_sp2.append(mean_sp2)
             if 'std' in analysis:
                 calcs.append(std_calcs)
+                if spatial:
+                    c_sp.append(std_sp)
+                    c_sp2.append(std_sp2)
             if 'median' in analysis:
                 calcs.append(median_calcs)
+                if spatial:
+                    c_sp.append(median_sp)
+                    c_sp2.append(median_sp2)
             if 'rms' in analysis:
                 calcs.append(rms_calcs)
+                if spatial:
+                    c_sp.append(rms_sp)
+                    c_sp2.append(rms_sp2)
             ens_calcs.append(calcs)
+            if spatial:
+                spat_calcs.append(c_sp)
+                spat_calcs2.append(c_sp2)
 
         # Find ensembles average
         if total:
-            return self.compute_total_stats_analysis(analysis, nan_indices, ens_calcs)
+            return self.compute_total_stats_analysis(analysis, nan_indices, spatial, ens_calcs)
 
         print("function compute_stats_analysis: Averages of data successfully computed.")
 
-        return ens_calcs, analysis, nan_indices
+        return ens_calcs, spat_calcs, spat_calcs2, analysis, nan_indices
 
 
 

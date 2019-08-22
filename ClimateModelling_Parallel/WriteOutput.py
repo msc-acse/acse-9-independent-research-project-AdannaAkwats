@@ -92,8 +92,10 @@ class WriteOutput:
                         output_file = re.sub(str(self.start_date[2]), 'multi_model', self.ens_files[i][0])
                 else:
                     output_file = re.sub(r'_(\d+)_(\d+)', '_' + str(self.start_date[2]) + '_' + str(self.end_date[2]), self.ens_files[i][0])
+                    output_file = re.sub(r'_(\d+)-(\d+)', '_' + str(self.start_date[2]) + '-' + str(self.end_date[2]), self.ens_files[i][0])
                     if self.second_date_given:
                         output_file = re.sub(r'_(\d+)_(\d+)', '_multi_model', self.ens_files[i][0])
+                        output_file = re.sub(r'_(\d+)-(\d+)', '_multi_model', self.ens_files[i][0])
                 # append start and end date to file name
                 output_file = os.path.basename(os.path.normpath(output_file))
             else:
@@ -154,10 +156,13 @@ class WriteOutput:
                 # Save original grid to file
                 cube_saved = self.saved[i][var]
                 # Replace to original names
-                coord = cube_saved.coord("longitude")
-                coord.rename(lon_name)
-                coord = cube_saved.coord("latitude")
-                coord.rename(lat_name)
+                try:
+                    coord = cube_saved.coord("longitude")
+                    coord.rename(lon_name)
+                    coord = cube_saved.coord("latitude")
+                    coord.rename(lat_name)
+                except Exception:
+                    pass
                 try:
                     coord = cube_saved.coord("time")
                     coord.rename(time_name)
@@ -175,11 +180,16 @@ class WriteOutput:
                     for a in range(len(self.analysis_str)):
                         # Save analysis grid to file
                         cube = self.ens_means[i][a][var]
+                        d = np.asarray(cube.data)
+                        cube.data = d
                         # Rename to original names
-                        coord = cube.coord("longitude")
-                        coord.rename(lon_name)
-                        coord = cube.coord("latitude")
-                        coord.rename(lat_name)
+                        try:
+                            coord = cube.coord("longitude")
+                            coord.rename(lon_name)
+                            coord = cube.coord("latitude")
+                            coord.rename(lat_name)
+                        except Exception:
+                            pass
                         try:  # Time may not always be here if we take the averages
                             coord = cube.coord("time")
                             coord.rename(time_name)
@@ -426,10 +436,13 @@ class WriteOutput:
                     # Save original grid to file
                     cube_saved = self.ens_means[0][var]
                     # Replace to original names
-                    coord = cube_saved.coord("longitude")
-                    coord.rename(lon_name)
-                    coord = cube_saved.coord("latitude")
-                    coord.rename(lat_name)
+                    try:
+                        coord = cube_saved.coord("longitude")
+                        coord.rename(lon_name)
+                        coord = cube_saved.coord("latitude")
+                        coord.rename(lat_name)
+                    except Exception:
+                        pass
                     try:
                         coord = cube_saved.coord("time")
                         coord.rename(time_name)
@@ -447,13 +460,21 @@ class WriteOutput:
                 for a in range(len(self.analysis_str)):
                     # Save analysis grid to file
                     cube = self.ens_means[a][var]
+                    d = np.asarray(cube.data)
+                    cube.data = d
                     # Rename to original names
-                    coord = cube.coord("longitude")
-                    coord.rename(lon_name)
-                    coord = cube.coord("latitude")
-                    coord.rename(lat_name)
-                    coord = cube.coord("time")
-                    coord.rename(time_name)
+                    try:
+                        coord = cube.coord("longitude")
+                        coord.rename(lon_name)
+                        coord = cube.coord("latitude")
+                        coord.rename(lat_name)
+                    except Exception:
+                        pass
+                    try:
+                        coord = cube.coord("time")
+                        coord.rename(time_name)
+                    except Exception:
+                        pass
                     # Convert to xarray
                     converted = xr.DataArray.from_iris(cube)
                     # Add analysis name to variable
@@ -528,53 +549,5 @@ class WriteOutput:
                 elif dest_key == 'source':
                     dest.source = dest_val
         dest.close()
-
-
-def save_extract_data_to_file(list_ens, full_list_ens, ens_files, abs_files, args_dict, num=''):
-    """
-    Save given objects to pickle file in current directory
-    :param list_ens: List of ensemble dicts
-    :param full_list_ens: List of ensemble dicts of full map (only if lat and lon are given)
-    :param ens_files: List of file used
-    :param abs_files: Absolute path of ens_files
-    :param args_dict: dictionary of all arguments in command line
-    """
-
-    afile = open(r'extracted_data' + str(num) + '.pkl', 'wb')
-    pickle.dump(list_ens, afile)
-    pickle.dump(ens_files, afile)
-    pickle.dump(abs_files, afile)
-    pickle.dump(args_dict, afile)
-    if args_dict['lat'] is not None:
-        pickle.dump(full_list_ens, afile)
-    afile.close()
-
-    print("function save_extract_data_from_file: Extracted data successfully saved to extracted_data.pkl.")
-
-
-def load_extract_data_from_file(filename):
-    """
-    Load objects from pickle file
-    :param filename: name of pickle file
-    :return: - list of ensemble (iris cube) data
-             - list of ensemble files
-             - list of ensemble files in absolute path
-             - dictionary of arguments in command line
-             - list of ensemble data (full map) - this is not None if lat/lon are not None
-    """
-    afile = open(filename, "rb")
-    list_ens = pickle.load(afile)
-    ens_files = pickle.load(afile)
-    abs_files = pickle.load(afile)
-    args_dict = pickle.load(afile)
-    full_list_ens = None
-    if args_dict['lat'] is not None:
-        full_list_ens = pickle.load(afile)
-    afile.close()
-
-    print("function load_extract_data_from_file: Extracted data successfully loaded from " + filename + ".")
-
-    return list_ens, ens_files, abs_files, args_dict, full_list_ens
-
 
 

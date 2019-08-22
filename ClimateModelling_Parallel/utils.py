@@ -9,7 +9,7 @@ import ast
 import sys
 from collections import defaultdict
 import xarray as xr
-
+from calendar import isleap
 """
 Script that contains useful functions
 """
@@ -111,7 +111,14 @@ def get_file_two_years(file):
     if match:
         # Check strings are length 4 - years
         if len(match.group(1)) >= 4 and len(match.group(2)) >= 4:
-            return int(match.group(1)), int(match.group(2))
+            return int(match.group(1)[:4]), int(match.group(2)[:4])
+
+    f = r'_(\d+)-(\d+)'
+    match = re.search(f, file)
+    if match:
+        # Check strings are length 4 - years
+        if len(match.group(1)) >= 4 and len(match.group(2)) >= 4:
+            return int(match.group(1)[:4]), int(match.group(2)[:4])
     return False
 
 
@@ -142,13 +149,14 @@ def ens_to_indx(ens_num, number_of_ensembles, max_start=1000000):
     return res
 
 
-def get_diff_start_end(start_date, end_date, min_yr=None, monthly=False):
+def get_diff_start_end(start_date, end_date, min_yr=None, monthly=False, num_leap_year_input=None):
     """
     Returns the number of days (or months) between two dates
     :param start_date: start date ([day, month, year])
     :param end_date: end date ([day, month, year])
     :param min_yr: minimum year, int, default = None
     :param monthly: if set, then calculate number of months, otherwise calculate number of days
+    :param num_leap_year_input: number of leap years in the input dataset (in extract)
     :return: the number of days (or month) between beginning of start year to start date
              the number of days (or month) between beginning of start year to end date
     """
@@ -160,11 +168,26 @@ def get_diff_start_end(start_date, end_date, min_yr=None, monthly=False):
 
     start, end = date(yr_s, mon_s, day_s), date(yr_e, mon_e, day_e)
 
+    # Calculate the number of leap years between min date and start date
+    start_num_leap_date, end_num_leap_date = 0, 0
+    if not monthly:
+        for i in range(min_yr, yr_s):
+            if isleap(i):
+                start_num_leap_date += 1
+        #  Calculate the number of leap years between start date and end date
+        for i in range(yr_s, yr_e+ 1):
+            if isleap(i):
+                end_num_leap_date += 1
+
     # For daily date
     if not monthly:
         # Calculate the days till the start and end
         till_start_days = (start - date(min_yr, Month.January, 1)).days
         till_end_days = (end - date(min_yr, Month.January, 1)).days
+        if num_leap_year_input == 0:  # If calendar is NOLEAP (365-day)
+            # remove leap year day from days
+            till_start_days -= start_num_leap_date
+            till_end_days -= end_num_leap_date
         return till_start_days, till_end_days + 1
 
     # For monthly data
@@ -491,7 +514,6 @@ def print_end_statement():
     print("PROGRAM FINSISHED.")
     print("Progress and potential errors are logged in message.log file.")
     print("To open message.log, type in cmd line: less message.log")
-    print("  Press q to quit file when finished.")
 
 
 def open_txt_points(filename):
