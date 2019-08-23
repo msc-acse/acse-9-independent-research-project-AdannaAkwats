@@ -1,1 +1,0 @@
-This folder contains the netcdf files analysed by the code.  

@@ -107,7 +107,7 @@ class Extract:
 
         # Check level is within limits
         if len(level) == 1:
-            if level > cube_data.shape[0] or level < 0:
+            if level[0] > cube_data.shape[0] or level[0] < 0:
                 print("ERROR in function get_mask: level given is not within depth range 0 <= level <= "
                       + str(cube_data.shape[0]))
                 sys.exit()
@@ -297,7 +297,7 @@ class Extract:
             abs_files[ens_indx].append(joined)
 
         # Get corrct start and end positions
-        till_start, till_end, set_day = None, None, False
+        till_start, till_end, set_day, num_leap_years = None, None, False, None
 
         # Save names of latitude, longitude, depth or time
         time_name, lat_name, lon_name = None, None, None
@@ -312,7 +312,7 @@ class Extract:
         # If sample/grid point and regrid file
         regrid_lats, regrid_lons = None, None
         if sp and nc_true:
-            regrid_lats, regrid_lons = regrid_from_file(self.points_sample_grid)
+            regrid_lats, regrid_lons = self.regrid_from_file(self.points_sample_grid)
 
         # Go through variables in each ensemble
         for i in range(self.num_ens):
@@ -333,8 +333,8 @@ class Extract:
                                 days = datasets.coords['time'].dt.dayofyear
                                 num_leap_years = len(days[days == 366])
                                 # Get exact indices of start and end date
-                            till_start, till_end = get_diff_start_end(self.start_date, self.end_date, min_yr=min_yr,
-                                                                      monthly=self.monthly,
+                            till_start, till_end = get_diff_start_end(self.start_date, self.end_date,
+                                                                      min_yr=min_yr, monthly=self.monthly,
                                                                       num_leap_year_input=num_leap_years)
                             set_day = True
                         time_selected = datasets[var][dict(time=slice(till_start, till_end))]
@@ -349,7 +349,8 @@ class Extract:
                                                                       num_leap_year_input=num_leap_years)
                             set_day = True
                         time_selected = datasets[var][dict(t=slice(till_start, till_end))]
-                except Exception:
+                except Exception as err:
+                    print("Exception thrown in function extract_data", str(err))
                     time_selected = datasets[var]
                 # Convert to cube
                 cube = time_selected.to_iris()
@@ -478,8 +479,6 @@ class Extract:
                         else:
                             reduced_cube = cube[level[0]-1]
                         reduced_cube.data = mask_cube
-                        # Transpose back
-                        reduced_cube.transpose(indices)
                     else:
                         cube.data = mask_cube
                         # Transpose back

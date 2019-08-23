@@ -8,6 +8,7 @@ import directories
 from utils import check_valid_order, check_analysis, check_variables_covary, print_end_statement, check_valid_indices
 from calculate_indices import *
 from file_entry import file_entry
+from ProgressBar import *
 
 # Booleans set when user gives a just a year (or a year and month)
 class StartBools:
@@ -143,7 +144,7 @@ def user_entry():
     parser.add_argument('-e', '--ens', nargs=1, type=int,
                         metavar="number_of_ensembles", help="<Required> The number of ensembles of the data. "
                                                             "If not set, the default value = 1", required=True)
-    parser.add_argument('-ht', '--hist', nargs='?', const='fd', default='fd',
+    parser.add_argument('-ht', '--hist', nargs='*',
                         metavar="number_of_bins_in_histogram", help=" Options for bin size selection. If not set, the "
                                                                     "default value = fd (Freedman "
                                                                     "Diaconis Estimator). The list of the potential "
@@ -189,8 +190,11 @@ def user_entry():
                             """)
     # Log output
     old_stdout = sys.stdout
-    log_file = open("message.log", "w")
+    log_file = open("output.log", "w")
     sys.stdout = log_file
+
+    # Init progress bar
+    progress = ProgressBar(description='Climate Modelling software output', n_iter=5)
 
     # Initialise the variables
     algae_type, start, varbs, ens, end, analysis, spatial, total = None, None, None, None, None, None, None, None
@@ -228,6 +232,8 @@ def user_entry():
         calc_areas = args.areas
         index = args.index
 
+    # Update progress after getting input from user
+    progress.update()
 
     # Get command line arguments
     argv = 'python main.py'
@@ -391,9 +397,14 @@ def user_entry():
         check_variables_covary(varbs)
 
     if not hist:
-        hist = 'fd'
+        hist = ['fd']
     elif hist:
-        argv = argv + ' -ht ' + hist
+        argv = argv + ' -ht ' + str(hist[0])
+        if len(hist) == 2:
+            argv = argv + ' ' + str(hist[1])
+        elif len(hist) > 2:
+            print("ERROR in function user_entry: Histogram argument has invalid number of arguments.")
+            sys.exit()
 
     print("Histogram bin selection option:", hist)
 
@@ -428,13 +439,19 @@ def user_entry():
         start2 = [day_s2, mon_s2, yr_s2]
         end2 = [day_e2, mon_e2, yr_e2]
 
+    # Update progress after preocessing input from user
+    progress.update()
+
 
     # Calculate indices
     if index:  # Self contained action
         calculate_index(algae_type, index, varbs, start, end, start2, end2, monthly=monthly, test=True)
+        # Update progress after calculating index
+        progress.update()
+        progress.finish()
         sys.exit()
 
-    # Extract data from files
+    # EXTRACT DATA FROM FILES
     extract = Extract(algae_type[0], varbs, start, end, ens, monthly=monthly, lat=lat, lon=lon, grid=grid,
                                                            points_sample_grid=points_sample_grid,
                                                            lon_centre=lon_centre, maskfile=mask,
@@ -453,6 +470,9 @@ def user_entry():
                                                                lon_centre=lon_centre, maskfile=mask,
                                                                calc_areas=calc_areas)
         saved2, ens_files2, abs_files2, full_saved2, _ = extract.extract_data()
+
+    # Update progress after extracting data
+    progress.update()
 
     # COMPUTE ANALYSIS
     anlys = Analysis(saved)
@@ -473,6 +493,9 @@ def user_entry():
     # Warning for mask and sample/grid
     if mask is not None and lat is not None:
         print("WARNING: Please ensure that sample/grid point is in the masked region.")
+
+    # Update progress after computing analysis
+    progress.update()
 
 
     # PLOTTING
@@ -510,8 +533,11 @@ def user_entry():
                 create_timeseries(saved, start, end, varbs,
                                   save_out=output, ens_num=plot_ens_num, func_name=func_name, monthly=monthly,
                                   second_date_given=second_date_given, plot=plot)
+            # Update progress after plotting
+            progress.update()
+
     except Exception as err:
-        print("ERROR in user_entry: " + str(err))
+        print("Exception thrown in function user_entry when plotting: " + str(err))
 
     # WRITE ANALYSIS TO NETCDF FILE
     if output:
@@ -523,6 +549,8 @@ def user_entry():
                          points_sample_grid=points_sample_grid,
                          second_date_given=second_date_given, test=True)
         wo.write_analysis_to_netcdf_file()
+        # Update progress after writing output
+        progress.update()
 
     print("PROGRAM SUCCESSFUL - TERMINAL FINISHED.")
     # End logging
@@ -531,6 +559,8 @@ def user_entry():
 
     # Print to terminal when finished
     print_end_statement()
+
+    progress.finish()
 
     # Show graphs
     if plot is not None:

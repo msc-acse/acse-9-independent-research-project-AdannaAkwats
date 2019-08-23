@@ -5,4 +5,4 @@
 # Note: level >= 1 and <= depth in netcdf file
 # You can also put a range of levels to choose separated by '-'
 [(-25, -40), (75, -40), (-25, 40), (75,40)]
-level: 2-3
+level: 2

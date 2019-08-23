@@ -13,3 +13,4 @@ cf-units>=2
 cftime
 dask[array]
 six
+progressbar==2.5

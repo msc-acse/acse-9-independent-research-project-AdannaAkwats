@@ -36,7 +36,7 @@ class Analysis:
             long_name = self.list_ens[0][var].long_name
             var_name = self.list_ens[0][var].var_name
             s_name = self.list_ens[0][var].standard_name
-            atrr = self.list_ens[0][var].attributes
+            attr = self.list_ens[0][var].attributes
             # convert cubes to xarray
             xr_var = [xr.DataArray.from_iris(ens[var]) for ens in self.list_ens]
             # Combine the dataarrays

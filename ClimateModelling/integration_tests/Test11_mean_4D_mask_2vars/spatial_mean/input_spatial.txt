@@ -1,0 +1,34 @@
+﻿# User input for Climate Modelling Diagnostics Program
+#
+# ----------------- PLEASE FILL IN THE ARGUMENTS LISTED BELOW ------------------
+#
+# REQUIRED ARGUMENTS
+# ------------------------------------------------------------------------------
+Prefix: temp_rh
+Start date of analysis: 2193
+Variables: temp, rh
+Number of ensembles: 1
+#
+# ------------------------------------------------------------------------------
+# OPTIONAL ARGUMENTS
+# ------------------------------------------------------------------------------
+End date of analysis:
+Analysis: mean
+Spatial: True
+Total ensemble stats: False
+Plot: 1
+Monthly:
+Grid:
+Sample:
+Mask file: mask_example.txt
+Save Output: True
+Covary:
+Histogram bin selection: fd
+Longitude centre:
+User function:
+Calculate areas:
+Calculate index:
+#
+# ------------------------------------------------------------------------------
+# HELP : Found in the UserGuide
+# ------------------------------------------------------------------------------

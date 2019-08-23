@@ -46,14 +46,21 @@ def create_histogram(list_ens, ens_stats, start_date, end_date, variables, month
 
     # If file is given, select the bin edges in the file
     bins_dict, x, y = None, None, None
-    if '.' in sel:
-        hist_file = os.path.join(directories.INPUT, sel)
+    if '.' in sel[0]:
+        hist_file = os.path.join(directories.INPUT, sel[0])
         bins_dict, x, y = get_bins_from_file(hist_file, variables)
-    else:
+    elif len(sel) == 1:
         try:
-            sel = int(sel)
+            sel = int(sel[0])
         except Exception:
-            pass
+            sel = sel[0]
+    elif len(sel) == 2:
+        try:
+            sel[0] = int(sel[0])
+            sel[1] = int(sel[1])
+        except Exception:
+            print("ERROR in function create_histogram: bins size not valid: " + str(sel) + " - both elements should be integers.")
+            return None
 
     # Daily or monthly
     time_str = "daily"
@@ -107,7 +114,7 @@ def create_histogram(list_ens, ens_stats, start_date, end_date, variables, month
 
         if plot is not None:
             # Plot histogram
-            sns.set()
+            sns.set(rc={'figure.figsize': (11, 11)})
             for i in range(len(variables)):
                 if not cov:
                     fig, ax = plt.subplots()
@@ -138,7 +145,10 @@ def create_histogram(list_ens, ens_stats, start_date, end_date, variables, month
                 fig, ax = plt.subplots()
                 title_name = cubes[0].name() + " and " + cubes[1].name() + part_title
                 ax.set_title(title_name)
-                _, _, _, img = ax.hist2d(full_datum[0], full_datum[1], bins=[bins_dict[x], bins_dict[y]])
+                if bins_dict is None:
+                    _, _, _, img = ax.hist2d(full_datum[0], full_datum[1], bins=sel)
+                else:
+                    _, _, _, img = ax.hist2d(full_datum[0], full_datum[1], bins=[bins_dict[x], bins_dict[y]])
                 ax.set_xlabel(cubes[0].name() + ' (' + str(cubes[0].units) + ')')
                 ax.set_ylabel(cubes[1].name() + ' (' + str(cubes[1].units) + ')')
                 plt.colorbar(img, ax=ax, label='Frequency')
@@ -183,7 +193,7 @@ def create_histogram(list_ens, ens_stats, start_date, end_date, variables, month
                 file = open(os.path.join(directories.ANALYSIS, title_name), 'w')
                 file.write("# " + cubes[0].name() + "," + cubes[1].name() + "," + "Frequency\n")
                 if bins_dict is None:
-                    hist, xs, ys = np.histogram2d(full_datum[0], full_datum[1])
+                    hist, xs, ys = np.histogram2d(full_datum[0], full_datum[1], bins=sel)
                 else:
                     hist, xs, ys = np.histogram2d(full_datum[0], full_datum[1],
                                                   bins=[bins_dict[x], bins_dict[y]])
@@ -267,7 +277,7 @@ def create_analysis_histogram(list_ens, start_date, end_date, variables, time_st
         file_names = defaultdict(list)
         if plot is not None:
             # Plot histogram
-            sns.set()
+            sns.set(rc={'figure.figsize': (11, 11)})
             for i in range(len(variables)):
                 if not cov:
                     fig, ax = plt.subplots()
@@ -308,7 +318,10 @@ def create_analysis_histogram(list_ens, start_date, end_date, variables, time_st
                 if second_date_given:
                     title_name = "multi_model " + title_name
                 ax.set_title(title_name)
-                _, _, _, img = ax.hist2d(full_datum[a][0], full_datum[a][1], bins=[bins_dict[x], bins_dict[y]])
+                if bins_dict is None:
+                    _, _, _, img = ax.hist2d(full_datum[a][0], full_datum[a][1], bins=sel)
+                else:
+                    _, _, _, img = ax.hist2d(full_datum[a][0], full_datum[a][1], bins=[bins_dict[x], bins_dict[y]])
                 ax.set_xlabel(cubes[a][0].name() + ' (' + str(cubes[a][0].units) + ')')
                 ax.set_ylabel(cubes[a][1].name() + ' (' + str(cubes[a][1].units) + ')')
                 plt.colorbar(img, ax=ax, label='Frequency')
@@ -353,14 +366,14 @@ def create_analysis_histogram(list_ens, start_date, end_date, variables, time_st
                 file = open(os.path.join(directories.ANALYSIS, file_name), 'w')
                 file.write("# " + cubes[a][0].name() + "," + cubes[a][1].name() + "," + "Frequency\n")
                 if bins_dict is None:
-                    hist, xs, ys = np.histogram2d(full_datum[a][0], full_datum[a][1])
+                    hist, xs, ys = np.histogram2d(full_datum[a][0], full_datum[a][1], bins=sel)
                 else:
                     hist, xs, ys = np.histogram2d(full_datum[a][0], full_datum[a][1],
                                                   bins=[bins_dict[x], bins_dict[y]])
 
                 # Get each corresponding value and write to file
-                for i in range(len(xs)):
-                    for j in range(len(ys)):
+                for i in range(len(xs) - 1):
+                    for j in range(len(ys) - 1):
                         file.write(str(xs[i]) + "," + str(ys[j]) + "," + str(hist[i][j]) + "\n")
                 file.close()
 
@@ -474,6 +487,10 @@ def create_timeseries(list_ens, start_date, end_date, variables,  monthly=False,
             axs.set_xlabel("Time (month/year)")
             axs.set_ylabel(cube.name())
 
+            if save_out:
+                plt.savefig(os.path.join(directories.ANALYSIS, file_name))
+                print("Timeseries plot is saved in the " + directories.ANALYSIS + " folder as a png file.")
+
             # Boxplot - Yearly seasonality
             fig, axs1 = plt.subplots(1, 1)
             df['Month'] = df.index.month
@@ -481,10 +498,6 @@ def create_timeseries(list_ens, start_date, end_date, variables,  monthly=False,
             axs1.set_title("Yearly seasonality of " + cube.name())
             axs1.set_xlabel("Months")
             axs1.set_ylabel(cube.name())
-
-            if save_out:
-                plt.savefig(os.path.join(directories.ANALYSIS, file_name))
-                print("Timeseries plot is saved in the " + directories.ANALYSIS + " folder as a png file.")
 
 
 def create_timeseries_helper(cube, variable, start_date, end_date, time_str, monthly, title_name, save_out,
@@ -571,6 +584,10 @@ def create_timeseries_helper(cube, variable, start_date, end_date, time_str, mon
             axs.set_xlabel("Time (month/year)")
             axs.set_ylabel(cube.name())
 
+            if save_out:
+                plt.savefig(os.path.join(directories.ANALYSIS, file_name))
+                print("Timeseries plot is saved in the " + directories.ANALYSIS + " folder as a png file.")
+
             # Boxplot - Yearly seasonality
             fig, axs1 = plt.subplots(1, 1)
             df['Month'] = df.index.month
@@ -579,9 +596,7 @@ def create_timeseries_helper(cube, variable, start_date, end_date, time_str, mon
             axs1.set_xlabel("Months")
             axs1.set_ylabel(cube.name())
 
-    if save_out:
-        plt.savefig(os.path.join(directories.ANALYSIS, file_name))
-        print("Timeseries plot is saved in the " + directories.ANALYSIS + " folder as a png file.")
+
 
 
 def create_ts_both_graphs(calc, calc2, variable, analysis):

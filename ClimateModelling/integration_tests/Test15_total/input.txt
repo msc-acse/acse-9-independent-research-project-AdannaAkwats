@@ -1,0 +1,34 @@
+﻿# User input for Climate Modelling Diagnostics Program
+#
+# ----------------- PLEASE FILL IN THE ARGUMENTS LISTED BELOW ------------------
+#
+# REQUIRED ARGUMENTS
+# ------------------------------------------------------------------------------
+Prefix: air_temp
+Start date of analysis: 1970
+Variables: air_temperature
+Number of ensembles: 2
+#
+# ------------------------------------------------------------------------------
+# OPTIONAL ARGUMENTS
+# ------------------------------------------------------------------------------
+End date of analysis:
+Analysis:
+Spatial:
+Total ensemble stats: True
+Plot: 1
+Monthly:
+Grid:
+Sample:
+Mask file:
+Save Output: True
+Covary:
+Histogram bin selection:
+Longitude centre:
+User function:
+Calculate areas:
+Calculate index:
+#
+# ------------------------------------------------------------------------------
+# HELP : Found in the UserGuide
+# ------------------------------------------------------------------------------
