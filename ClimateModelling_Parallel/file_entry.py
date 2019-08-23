@@ -1,5 +1,6 @@
 import os
 import directories
+from utils import *
 
 
 def file_entry(example=False):
@@ -155,8 +156,21 @@ def file_entry(example=False):
             sys.exit()
 
     # Histogram option
-    if len(hist) == 0 or not hist:
-        hist = 'fd'
+    if not hist:
+        hist = ['fd']
+    else:
+        hist = hist.split(',')
+        if len(hist) == 2:
+            try:
+                hist[0] = hist[0].strip()
+                hist[1] = hist[1].strip()
+            except Exception:
+                print("ERROR in function file_entry: Histogram argument in input file may be missing a comma.")
+                print(" Note that for a 2D histogram, if two bin inputs are given, both must be integers.")
+                sys.exit()
+        elif len(hist) > 2:
+            print("ERROR in function file_entry: Number of arguments given for histogram is invalid. ")
+            sys.exit()
 
     # Check for longitude centre
     if lb:
@@ -191,7 +205,7 @@ def file_entry(example=False):
         check_valid_indices(index)
 
     # Check boolean options
-    # spatial, total, monthly, output, covary, save_ext, calc_areas, index
+    # spatial, total, monthly, output, covary, save_ext, calc_areas
     if not isinstance(spatial, bool):
         print("ERROR in function file_entry: Spatial argument in input file is invalid. "
               "It must be set to True/False or left empty (False).")
@@ -214,10 +228,6 @@ def file_entry(example=False):
         sys.exit()
     if not isinstance(calc_areas, bool):
         print("ERROR in function file_entry: Calculate areas argument in input file is invalid. "
-              "It must be set to True/False or left empty (False).")
-        sys.exit()
-    if not isinstance(index, bool):
-        print("ERROR in function file_entry: Calculate index argument in input file is invalid. "
               "It must be set to True/False or left empty (False).")
         sys.exit()
 

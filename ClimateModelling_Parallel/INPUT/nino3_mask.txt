@@ -1,8 +1,7 @@
 # Mask file expected to have only one list of polygons
 # Comments in file can have '#' at the start of the line
-# Each polygon is a list of tuples of integers (longitude, latitude)
+# Each polygon is a list of tuples of integers
 # level is the depth level of mask. If this is not specified, then all levels of data are used.
 # Note: level >= 1 and <= depth in netcdf file
 # You can also put a range of levels to choose separated by '-'
-[(-25, -40), (75, -40), (-25, 40), (75,40)]
-level: 2
+[(-150, 5), (-150, -5), (-90, 5), (-90,-5)]

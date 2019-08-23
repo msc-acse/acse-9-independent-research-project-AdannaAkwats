@@ -4,26 +4,26 @@
 #
 # REQUIRED ARGUMENTS
 # ------------------------------------------------------------------------------
-Prefix: ccb_Amon_CNRM-CM6-1_highresSST-present_r1i1p1f2_gr
-Start date of analysis: 1950
-Variables: ccb
+Prefix: E1
+Start date of analysis: 1970
+Variables: air_temperature
 Number of ensembles: 1
 #
 # ------------------------------------------------------------------------------
 # OPTIONAL ARGUMENTS
 # ------------------------------------------------------------------------------
-End date of analysis: 2014
+End date of analysis:
 Analysis: mean
-Spatial: True
-Total ensemble stats: False
+Spatial:
+Total ensemble stats:
 Plot: 1
-Monthly: True
+Monthly:
 Grid:
 Sample:
 Mask file:
 Save Output: True
 Covary:
-Histogram bin selection: 10
+Histogram bin selection:
 Longitude centre:
 User function:
 Calculate areas:

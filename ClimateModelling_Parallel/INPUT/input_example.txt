@@ -14,12 +14,12 @@ Number of ensembles: 2
 # ------------------------------------------------------------------------------
 End date of analysis: 1954
 Analysis: mean
-Spatial: True
-Total ensemble stats: True
+Spatial:
+Total ensemble stats:
 Plot: 1
 Monthly: False
 Grid:
-Sample:
+Sample: sample_points.txt
 Mask file:
 Save Output: True
 Covary:

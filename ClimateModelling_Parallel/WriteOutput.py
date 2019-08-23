@@ -129,7 +129,10 @@ class WriteOutput:
 
             # Combine each ensemble file into one
             times_append = xr.open_mfdataset(self.abs_files[i])
-            times_append.to_netcdf(path=output_file, mode='w')
+            try:
+                times_append.to_netcdf(path=output_file, mode='w')
+            except Exception as err:
+                print("ERROR in write_analysis_to_netcdf_file: " + str(err))
 
             # Get global atrributes of file to use later
             glob_attrs = times_append.attrs
