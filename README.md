@@ -98,6 +98,19 @@ The file `E1_north_america_ens101_1970.nc` is given as example data in the `DATA
 python main.py 1970 -pf E1_north_america -v air_temperature -e 1 -a mean -p 1
 ```
 
+## Debugging
+When the program is run successfully, the following message prints out:
+```
+python main.py 
+...
+
+PROGRAM FINSISHED.
+>> Progress and potential errors are logged in output.log file.
+>> To open output.log, type in cmd line: less output.log
+```
+If no message prints out, it is because an error has been seen in the code, this may be caused by invalid inputs being seen. 
+Open the `output.log` file created and this will give you a summary of what the code has been doing, and any errors that may have been thrown. 
+
 ## Tests
 [Pytests](https://docs.pytest.org/en/latest/index.html) were written to test and support the code. The unit tests are stored in `ClimateModelling/tests` These can be run by:
 ```
@@ -117,24 +130,24 @@ You can run the program using the input and data provided to see if the results 
     * `DATA/` : stores NetCDF model output files 
     * `INPUT/` : stores input.txt, input_example.txt and masks, histogram bins, sample points files. 
     * `RESULTS/` : stores the output of run of program
-        * `ensemble_averages`: stores the NetCDF output of program
-    * `tests` : stores unit tests written with pytest
-    * `integration_tests` : stores tests cases used to check all components are working. 
-    * Analysis.py : class that performs analysis on data 
-    * Extract.py : class that extracts useful data from NetCDF files given by user
-    * Months.py : class that has months of the year (needed by user_entry.py)
-    * ProgressBar : class that constructs the progress bar used when program is run.
-    * WriteOutput: class that write final data to NetCDF files. 
-    * calculate_indices.py : python wrapper that calls bash script calculate_indices.sh given data 
-    * calculate_indices.sh : bash script that calculates indices (enso, tno, pdo ...)
-    * create_test_data_files.py : used to create dummy NetCDF files to test with
-    * directories.py : stores the mappings of folders 
-    * file_entry.py : script that deals with extracting data from input.txt and input_example.txt
-    * main.py : the entry point of the program
-    * plots.py : script that contains functions that plots histograms, time series, boxplots and maps
-    * user_entry : script that parses command line arguments and calls all functions to extract, analyse, plot and write output. 
-    * utils.py : script that contains useful functions used across the code base. 
-    * (output.log) : when program is run, all progress/error messages is stored here.  
+        * `ensemble_averages/`: stores the NetCDF output of program
+    * `tests/` : stores unit tests written with pytest
+    * `integration_tests/` : stores tests cases used to check all components are working. 
+    * `Analysis.py` : class that performs analysis on data 
+    * `Extract.py` : class that extracts useful data from NetCDF files given by user
+    * `Months.py` : class that has months of the year (needed by user_entry.py)
+    * `ProgressBar` : class that constructs the progress bar used when program is run.
+    * `WriteOutput`: class that write final data to NetCDF files. 
+    * `calculate_indices.py` : python wrapper that calls bash script calculate_indices.sh given data 
+    * `calculate_indices.sh` : bash script that calculates indices (enso, tno, pdo ...)
+    * `create_test_data_files.py` : used to create dummy NetCDF files to test with
+    * `directories.py` : stores the mappings of folders 
+    * `file_entry.py` : script that deals with extracting data from input.txt and input_example.txt
+    * `main.py` : the entry point of the program
+    * `plots.py` : script that contains functions that plots histograms, time series, boxplots and maps
+    * `user_entry` : script that parses command line arguments and calls all functions to extract, analyse, plot and write output. 
+    * `utils.py` : script that contains useful functions used across the code base. 
+    * (`output.log`) : when the program is run, all progress/error messages is stored here.  
 
 * `ClimateModelling_Parallel`: The parallelised version of the code
 
