@@ -1,0 +1,37 @@
+﻿# User input for Climate Modelling Diagnostics Program
+#
+# OBJECTIVE: Calculate the spatial mean of 2 ensembles of air temperature at 
+# 1970, giving one average over all ensembles.
+#
+# ----------------- PLEASE FILL IN THE ARGUMENTS LISTED BELOW ------------------
+#
+# REQUIRED ARGUMENTS
+# ------------------------------------------------------------------------------
+Prefix: air_temp
+Start date of analysis: 1970
+Variables: air_temperature
+Number of ensembles: 2
+#
+# ------------------------------------------------------------------------------
+# OPTIONAL ARGUMENTS
+# ------------------------------------------------------------------------------
+End date of analysis:
+Analysis: mean
+Spatial: True
+Total ensemble stats: True
+Plot: 1
+Monthly:
+Grid:
+Sample:
+Mask file:
+Save Output: True
+Covary:
+Histogram bin selection: fd
+Longitude centre:
+User function:
+Calculate areas:
+Calculate index:
+#
+# ------------------------------------------------------------------------------
+# HELP : Found in the UserGuide
+# ------------------------------------------------------------------------------

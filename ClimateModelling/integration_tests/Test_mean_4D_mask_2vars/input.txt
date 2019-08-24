@@ -1,0 +1,37 @@
+﻿# User input for Climate Modelling Diagnostics Program
+#
+# OBJECTIVE:  Calculate the mean of temperature and relative humidity at 2193
+# within the region given by mask. (The grid used is 4D (depth, time, lat, lon)
+#
+# ----------------- PLEASE FILL IN THE ARGUMENTS LISTED BELOW ------------------
+#
+# REQUIRED ARGUMENTS
+# ------------------------------------------------------------------------------
+Prefix: temp_rh
+Start date of analysis: 2193
+Variables: temp, rh
+Number of ensembles: 1
+#
+# ------------------------------------------------------------------------------
+# OPTIONAL ARGUMENTS
+# ------------------------------------------------------------------------------
+End date of analysis:
+Analysis: mean
+Spatial:
+Total ensemble stats:
+Plot: 1
+Monthly:
+Grid:
+Sample:
+Mask file: mask_example.txt
+Save Output: True
+Covary:
+Histogram bin selection: fd
+Longitude centre:
+User function:
+Calculate areas:
+Calculate index:
+#
+# ------------------------------------------------------------------------------
+# HELP : Found in the UserGuide
+# ------------------------------------------------------------------------------

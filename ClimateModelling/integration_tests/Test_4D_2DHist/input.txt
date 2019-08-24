@@ -1,0 +1,37 @@
+﻿# User input for Climate Modelling Diagnostics Program
+#
+# OBJECTIVE: Calculate the mean of temperature and relative humidity and create 
+# 2D histogram between the variables
+#
+# ----------------- PLEASE FILL IN THE ARGUMENTS LISTED BELOW ------------------
+#
+# REQUIRED ARGUMENTS
+# ------------------------------------------------------------------------------
+Prefix: temp_rh
+Start date of analysis: 2193
+Variables: temp, rh
+Number of ensembles: 1
+#
+# ------------------------------------------------------------------------------
+# OPTIONAL ARGUMENTS
+# ------------------------------------------------------------------------------
+End date of analysis:
+Analysis: mean
+Spatial:
+Total ensemble stats:
+Plot: 1
+Monthly:
+Grid:
+Sample:
+Mask file:
+Save Output: True
+Covary: True
+Histogram bin selection: 10, 20
+Longitude centre:
+User function:
+Calculate areas:
+Calculate index:
+#
+# ------------------------------------------------------------------------------
+# HELP : Found in the UserGuide
+# ------------------------------------------------------------------------------
