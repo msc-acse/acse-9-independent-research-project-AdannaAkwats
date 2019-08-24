@@ -557,10 +557,10 @@ def user_entry():
     sys.stdout = old_stdout
     log_file.close()
 
+    progress.finish()
+
     # Print to terminal when finished
     print_end_statement()
-
-    progress.finish()
 
     # Show graphs
     if plot is not None:
