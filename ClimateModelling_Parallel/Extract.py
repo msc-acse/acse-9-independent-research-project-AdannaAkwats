@@ -1,3 +1,6 @@
+"""
+Created by Adanna Akwataghibe (Github: AdannaAkwats)
+"""
 from utils import *
 import directories
 import xarray as xr

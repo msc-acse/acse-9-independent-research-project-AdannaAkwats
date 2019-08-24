@@ -1,3 +1,6 @@
+"""
+Created by Adanna Akwataghibe (Github: AdannaAkwats)
+"""
 import progressbar as pb
 
 class ProgressBar:

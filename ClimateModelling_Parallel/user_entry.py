@@ -1,3 +1,6 @@
+"""
+Created by Adanna Akwataghibe (Github: AdannaAkwats)
+"""
 import argparse
 from calendar import monthrange
 from Extract import *

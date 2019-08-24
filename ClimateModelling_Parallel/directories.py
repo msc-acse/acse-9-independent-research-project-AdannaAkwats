@@ -1,4 +1,6 @@
-
+"""
+Created by Adanna Akwataghibe (Github: AdannaAkwats)
+"""
 # The directories we use to store data, input and the analysis data
 DATA = "DATA"
 INPUT = "INPUT"

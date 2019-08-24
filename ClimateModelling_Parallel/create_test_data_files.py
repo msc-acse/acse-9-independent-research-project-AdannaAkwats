@@ -1,3 +1,6 @@
+"""
+Created by Adanna Akwataghibe (Github: AdannaAkwats)
+"""
 from netCDF4 import Dataset, num2date, date2num
 import time
 import numpy as np
