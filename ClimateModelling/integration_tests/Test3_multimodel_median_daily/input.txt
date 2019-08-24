@@ -1,5 +1,8 @@
 ﻿# User input for Climate Modelling Diagnostics Program
 #
+# OBJECTIVE:  Calculate the multi-model median difference for 
+# sea surface temperature between 1980-1990 and 2090-2100.
+#
 # ----------------- PLEASE FILL IN THE ARGUMENTS LISTED BELOW ------------------
 #
 # REQUIRED ARGUMENTS
@@ -15,9 +18,9 @@ Number of ensembles: 1
 End date of analysis: 1990, 2100
 Analysis: median
 Spatial:
-Total ensemble stats: False
+Total ensemble stats:
 Plot: 1
-Monthly: True
+Monthly:
 Grid:
 Sample:
 Mask file:

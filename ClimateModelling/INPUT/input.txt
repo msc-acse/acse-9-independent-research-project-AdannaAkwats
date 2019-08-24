@@ -13,11 +13,11 @@ Number of ensembles: 1
 # OPTIONAL ARGUMENTS
 # ------------------------------------------------------------------------------
 End date of analysis:
-Analysis: mean
+Analysis:
 Spatial:
 Total ensemble stats:
-Plot:
-Monthly: False
+Plot: 1
+Monthly:
 Grid:
 Sample:
 Mask file:

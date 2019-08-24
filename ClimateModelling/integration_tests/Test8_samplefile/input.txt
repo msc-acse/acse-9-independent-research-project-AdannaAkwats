@@ -1,5 +1,8 @@
 ﻿# User input for Climate Modelling Diagnostics Program
 #
+# OBJECTIVE: Regrid air pressure at convective cloud base between 1979 and 
+# 2014 measured monthly to grid of model output for North America.
+#
 # ----------------- PLEASE FILL IN THE ARGUMENTS LISTED BELOW ------------------
 #
 # REQUIRED ARGUMENTS

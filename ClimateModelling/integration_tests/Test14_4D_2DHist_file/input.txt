@@ -1,5 +1,8 @@
 ﻿# User input for Climate Modelling Diagnostics Program
 #
+# OBJECTIVE: Create 2D histogram between temperature and relative humidity 
+# using user defined histogram bins
+#
 # ----------------- PLEASE FILL IN THE ARGUMENTS LISTED BELOW ------------------
 #
 # REQUIRED ARGUMENTS
@@ -15,7 +18,7 @@ Number of ensembles: 1
 End date of analysis:
 Analysis: mean
 Spatial:
-Total ensemble stats: False
+Total ensemble stats:
 Plot: 1
 Monthly:
 Grid:

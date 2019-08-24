@@ -1,5 +1,9 @@
 ﻿# User input for Climate Modelling Diagnostics Program
 #
+# OBJECTIVE:  Calculate the mean of air pressure at convective cloud base 
+# between 1979 and 2014 measured monthly within region given by the mask and 
+# with the longitude centred at 0.0
+#
 # ----------------- PLEASE FILL IN THE ARGUMENTS LISTED BELOW ------------------
 #
 # REQUIRED ARGUMENTS

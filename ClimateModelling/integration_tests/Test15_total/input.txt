@@ -1,5 +1,8 @@
 ﻿# User input for Climate Modelling Diagnostics Program
 #
+# OBJECTIVE: Combine 2 ensembles of air temperature at 1970, giving 
+# one average over all ensembles
+#
 # ----------------- PLEASE FILL IN THE ARGUMENTS LISTED BELOW ------------------
 #
 # REQUIRED ARGUMENTS

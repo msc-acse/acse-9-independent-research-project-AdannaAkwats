@@ -1,5 +1,8 @@
 ﻿# User input for Climate Modelling Diagnostics Program
 #
+# OBJECTIVE: Calculate the multi model spatial mean  difference for 
+# sea surface temperature measured monthly, between 1850-1899 and 2065-2100
+#
 # ----------------- PLEASE FILL IN THE ARGUMENTS LISTED BELOW ------------------
 #
 # REQUIRED ARGUMENTS

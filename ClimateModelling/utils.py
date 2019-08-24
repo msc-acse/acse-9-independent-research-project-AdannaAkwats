@@ -511,9 +511,9 @@ def get_bins_from_file(hist_file, variables):
 
 
 def print_end_statement():
-    print("PROGRAM FINSISHED.")
-    print("Progress and potential errors are logged in output.log file.")
-    print("To open output.log, type in cmd line: less output.log")
+    print(">> PROGRAM FINSISHED.")
+    print(">> Progress and potential errors are logged in output.log file.")
+    print(">> To open output.log, type in cmd line: less output.log")
 
 
 def open_txt_points(filename):

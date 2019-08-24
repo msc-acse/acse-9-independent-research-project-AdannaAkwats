@@ -1,5 +1,9 @@
 ﻿# User input for Climate Modelling Diagnostics Program
 #
+# OBJECTIVE:  Perform equation between temperature and relative humidity given 
+# by user function of temperature and relative humidity at 2193. 
+# (The grid used is 4D (depth, time, lat, lon)
+#
 # ----------------- PLEASE FILL IN THE ARGUMENTS LISTED BELOW ------------------
 #
 # REQUIRED ARGUMENTS
@@ -15,7 +19,7 @@ Number of ensembles: 1
 End date of analysis:
 Analysis:
 Spatial:
-Total ensemble stats: False
+Total ensemble stats:
 Plot: 1
 Monthly:
 Grid:

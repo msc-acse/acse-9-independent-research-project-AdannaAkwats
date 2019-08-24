@@ -1,5 +1,9 @@
 ﻿# User input for Climate Modelling Diagnostics Program
-#
+# 
+# OBJECTIVE: Calculate the spatial mean of air pressure at convective 
+# cloud base between 1979 and 2014 measured monthly, with histogram bin size
+# of 10.
+# 
 # ----------------- PLEASE FILL IN THE ARGUMENTS LISTED BELOW ------------------
 #
 # REQUIRED ARGUMENTS
@@ -15,7 +19,7 @@ Number of ensembles: 1
 End date of analysis: 2014
 Analysis: mean
 Spatial: True
-Total ensemble stats: False
+Total ensemble stats:
 Plot: 1
 Monthly: True
 Grid:

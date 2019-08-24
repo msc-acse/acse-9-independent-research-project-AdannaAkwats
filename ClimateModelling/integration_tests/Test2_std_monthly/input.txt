@@ -1,5 +1,8 @@
 ﻿# User input for Climate Modelling Diagnostics Program
 #
+# OBJECTIVE: Calculate the standard deviation of air pressure at 
+# convective cloud base between 1979 and 2014 measured monthly
+#
 # ----------------- PLEASE FILL IN THE ARGUMENTS LISTED BELOW ------------------
 #
 # REQUIRED ARGUMENTS
@@ -15,7 +18,7 @@ Number of ensembles: 1
 End date of analysis: 2014
 Analysis: std
 Spatial:
-Total ensemble stats: False
+Total ensemble stats:
 Plot: 1
 Monthly: True
 Grid:
