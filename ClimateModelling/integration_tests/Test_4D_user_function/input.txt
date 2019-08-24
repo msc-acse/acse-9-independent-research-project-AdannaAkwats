@@ -1,4 +1,4 @@
-﻿# User input for Climate Modelling Diagnostics Program
+﻿# Created by Adanna Akwataghibe (Github: AdannaAkwats)
 #
 # OBJECTIVE:  Perform equation between temperature and relative humidity given 
 # by user function of temperature and relative humidity at 2193. 

@@ -1,9 +1,13 @@
+"""
+Created by Adanna Akwataghibe (Github: AdannaAkwats)
+"""
 import xarray as xr
 import subprocess
 import directories
 from utils import get_files_time_period
 import os
 import sys
+
 
 """
 Self contained Python script used to calculate indices

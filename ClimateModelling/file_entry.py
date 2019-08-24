@@ -1,3 +1,6 @@
+"""
+Created by Adanna Akwataghibe (Github: AdannaAkwats)
+"""
 import os
 import directories
 from utils import *

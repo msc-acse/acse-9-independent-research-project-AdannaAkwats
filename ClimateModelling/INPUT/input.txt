@@ -1,4 +1,5 @@
-﻿# User input for Climate Modelling Diagnostics Program
+﻿# Created by Adanna Akwataghibe (Github: AdannaAkwats)
+# User input for Climate Modelling Diagnostics Program
 #
 # ----------------- PLEASE FILL IN THE ARGUMENTS LISTED BELOW ------------------
 #

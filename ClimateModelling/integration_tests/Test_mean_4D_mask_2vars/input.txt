@@ -1,4 +1,5 @@
-﻿# User input for Climate Modelling Diagnostics Program
+﻿# Created by Adanna Akwataghibe (Github: AdannaAkwats)
+# User input for Climate Modelling Diagnostics Program
 #
 # OBJECTIVE:  Calculate the mean of temperature and relative humidity at 2193
 # within the region given by mask. (The grid used is 4D (depth, time, lat, lon)

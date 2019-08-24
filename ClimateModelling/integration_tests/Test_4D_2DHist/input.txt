@@ -1,4 +1,5 @@
-﻿# User input for Climate Modelling Diagnostics Program
+﻿# Created by Adanna Akwataghibe (Github: AdannaAkwats)
+# User input for Climate Modelling Diagnostics Program
 #
 # OBJECTIVE: Calculate the mean of temperature and relative humidity and create 
 # 2D histogram between the variables

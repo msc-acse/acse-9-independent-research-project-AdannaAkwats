@@ -1,4 +1,5 @@
-﻿# User input for Climate Modelling Diagnostics Program
+﻿# Created by Adanna Akwataghibe (Github: AdannaAkwats)
+# User input for Climate Modelling Diagnostics Program
 #
 # OBJECTIVE: Extract the grid point (20, 20) for  air pressure at convective 
 # cloud base between 1979 and 2014 measured monthly

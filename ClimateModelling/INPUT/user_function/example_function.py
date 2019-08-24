@@ -1,4 +1,7 @@
 import iris
+"""
+Created by Adanna Akwataghibe (AdannaAkwats)
+"""
 
 """
 This is an script that given an example of a user-given function

@@ -1,3 +1,4 @@
+# Created by Adanna Akwataghibe (Github: AdannaAkwats)
 # Mask file expected to have only one list of polygons
 # Comments in file can have '#' at the start of the line
 # Each polygon is a list of tuples of integers (longitude, latitude)

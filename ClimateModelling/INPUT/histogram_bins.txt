@@ -1,3 +1,4 @@
+# Created by Adanna Akwataghibe (Github: AdannaAkwats)
 # If you want to specify the bin edges used in the histogram, you can add them here.
 # Each variable MUST be defined with the key 'var'
 # The bin edges should then be specified on the line after the variable name

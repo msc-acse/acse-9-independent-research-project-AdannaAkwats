@@ -1,3 +1,6 @@
+"""
+Created by Adanna Akwataghibe (Github: AdannaAkwats)
+"""
 
 class Month:
     January = 1
