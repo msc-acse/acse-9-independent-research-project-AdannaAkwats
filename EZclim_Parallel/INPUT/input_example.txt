@@ -1,0 +1,35 @@
+﻿# Created by Adanna Akwataghibe (Github: AdannaAkwats)
+# User input for Climate Modelling Diagnostics Program: EZclim
+#
+# ----------------- PLEASE FILL IN THE ARGUMENTS LISTED BELOW ------------------
+#
+# REQUIRED ARGUMENTS
+# ------------------------------------------------------------------------------
+Prefix: ccb
+Start date of analysis: 1950
+Variables: ccb
+Number of ensembles: 5
+#
+# ------------------------------------------------------------------------------
+# OPTIONAL ARGUMENTS
+# ------------------------------------------------------------------------------
+End date of analysis: 1959
+Analysis: mean
+Spatial:
+Total ensemble stats: True
+Plot: 1
+Monthly: True
+Grid:
+Sample:
+Mask file:
+Save Output: True
+Covary:
+Histogram bin selection:
+Longitude centre:
+User function:
+Calculate areas:
+Calculate index:
+#
+# ------------------------------------------------------------------------------
+# HELP : Found in the UserGuide
+# ------------------------------------------------------------------------------

@@ -1,0 +1,35 @@
+﻿# Created by Adanna Akwataghibe (Github: AdannaAkwats)
+# User input for Climate Modelling Diagnostics Program: EZclim
+#
+# ----------------- PLEASE FILL IN THE ARGUMENTS LISTED BELOW ------------------
+#
+# REQUIRED ARGUMENTS
+# ------------------------------------------------------------------------------
+Prefix:
+Start date of analysis:
+Variables:
+Number of ensembles: 1
+#
+# ------------------------------------------------------------------------------
+# OPTIONAL ARGUMENTS
+# ------------------------------------------------------------------------------
+End date of analysis:
+Analysis: mean
+Spatial:
+Total ensemble stats:
+Plot:
+Monthly: False
+Grid:
+Sample:
+Mask file:
+Save Output: True
+Covary:
+Histogram bin selection:
+Longitude centre:
+User function:
+Calculate areas:
+Calculate index:
+#
+# ------------------------------------------------------------------------------
+# HELP : Found in the UserGuide
+# ------------------------------------------------------------------------------

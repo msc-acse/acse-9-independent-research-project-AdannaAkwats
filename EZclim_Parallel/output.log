@@ -1,0 +1,18 @@
+Arguments:
+- file prefix:  ccb
+- variables:  ['ccb']
+- start date: 1950-1-1
+- end date: 1959-12-31
+Number of ensembles: 5
+Analysis:  ['mean']
+Total ensemble stats option selected.
+Plotting option selected.
+Monthly date expected.
+Save analysis data output selected.
+Histogram bin selection option: ['fd']
+function extract_data: Data successfully extracted from files.
+function compute_total_stats_analysis: Averages of data successfully computed.
+Histogram data is saved in the RESULTS folder as a txt file.
+Map is saved in the RESULTS folder as a png file.
+WARNING in function create_timeseries: cannot construct timeseries with more than 1-dimension cube.
+PROGRAM SUCCESSFUL - TERMINAL FINISHED.
