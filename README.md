@@ -1,4 +1,4 @@
-# IRP - A software package for Climate Modelling diagnostics
+# **EZclim** - *A software package for Climate Modelling diagnostics*
 
 The Climate Modelling (Diagnostics) Software is written using Python 3 and enables users to compute climate model diagnostics. This software makes use of many python modules and libraries. These libraries must be installed in order to successfully run the program.
 
