@@ -91,9 +91,10 @@ This example input file calculates the mean of `air_temperature` given in `DATA\
 
 ### Command line interface (CLI)
 ```
-python main.py -h 
+ python main.py -h 
+ less output.log
 ```
-shows the list of commands available to use and their descriptions. 
+shows the list of commands available (saved in `output.log`) to use and their descriptions. 
 #### Example commands
 The file `E1_north_america_ens101_1970.nc` is given as example data in the `DATA` folder. To calculate the mean of variable `air_temperature`, and plot the histogram and map, we would call:
 ```
