@@ -37,7 +37,7 @@ There are two ways to call the program:
 An input file is set up for the user to fill in the required values in ``INPUT/input.txt``. 
 The values to fill in are listed below. The pre-filled values are given as the default. 
 ```
-# User input for Climate Modelling Diagnostics Program
+# User input for Climate Modelling Diagnostics Program: EZclim
 #
 # ----------------- PLEASE FILL IN THE ARGUMENTS LISTED BELOW ------------------
 #
