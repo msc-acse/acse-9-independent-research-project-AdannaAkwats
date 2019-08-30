@@ -2,7 +2,7 @@
 
 The Climate Modelling (Diagnostics) Software is written using Python 3 and enables users to compute climate model diagnostics. This software makes use of many python modules and libraries. These libraries must be installed in order to successfully run the program.
 
-It is **highly recommended** to go through the UserGuide.pdf as this gives detailed instructions on how to setup, run and test the program. 
+It is **highly recommended** to go through the [**User Guide**](UserGuide.pdf) as this gives detailed instructions on how to setup, run and test the program. 
 
 Below is the *quick setup and run* of the software. 
 
