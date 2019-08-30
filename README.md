@@ -72,9 +72,9 @@ Calculate index:
 # HELP : Found in the UserGuide
 # ------------------------------------------------------------------------------
 ```
-All ommands must be done within the `ClimateModelling` folder, so:
+All ommands must be done within the `EZclim` folder, so:
 ```
-cd ClimateModelling
+cd EZclim
 ```
 After filling the values in the file, to run the program simply call: 
 ```
@@ -112,7 +112,7 @@ If no message prints out, it is because an error has been seen in the code, this
 Open the `output.log` file created and this will give you a summary of what the code has been doing, and any errors that may have been thrown. 
 
 ## Tests
-[Pytests](https://docs.pytest.org/en/latest/index.html) were written to test and support the code. The unit tests are stored in `ClimateModelling/tests` These can be run by:
+[Pytests](https://docs.pytest.org/en/latest/index.html) were written to test and support the code. The unit tests are stored in `EZclim/tests` These can be run by:
 ```
 pytest
 ```
@@ -122,11 +122,11 @@ pip install -U pytest
 ```
 
 ### Integration/Scenario tests 
-In the folder `ClimateModelling/integration_tests`, a list of scenarios have been run and saved. 
+In the folder `EZclim/integration_tests`, a list of scenarios have been run and saved. 
 You can run the program using the input and data provided to see if the results obtained match the expected results.
 
 ## Brief description of files
-* `ClimateModelling`: contains classes and scripts that make up the software. 
+* `EZclim`: contains classes and scripts that make up the software. 
     * `DATA/` : stores NetCDF model output files 
     * `INPUT/` : stores input.txt, input_example.txt and masks, histogram bins, sample points files. 
     * `RESULTS/` : stores the output of run of program
@@ -149,7 +149,7 @@ You can run the program using the input and data provided to see if the results 
     * `utils.py` : script that contains useful functions used across the code base. 
     * (`output.log`) : when the program is run, all progress/error messages is stored here.  
 
-* `ClimateModelling_Parallel`: The parallelised version of the code
+* `EZclim_Parallel`: The parallelised version of the code
 
 ## Additional info
 - The names and path of your `data` and `results` folder can be changed in the python file `directories.py`, if needed.
