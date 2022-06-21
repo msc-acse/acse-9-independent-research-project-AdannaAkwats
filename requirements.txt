@@ -1,7 +1,7 @@
 matplotlib==3.0.1
 nco==1.0.0
 netCDF4==1.4.2
-numpy==1.16.3
+numpy==1.22.0
 pytest==3.5.1
 python-dateutil==2.7.3
 scipy==1.2.1
